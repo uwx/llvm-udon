@@ -301,8 +301,15 @@ void UDONWriter::emitStore(UBlock &B, const std::string &Value,
   if (Ty->isIntegerTy(32) || Ty->isPointerTy() || Ty->isIntegerTy(64) ||
       Ty->isFloatTy() || Ty->isDoubleTy()) {
     // GetBytes returns a fresh array into a scratch slot, then __CopyTo__
-    // writes it into `__mem` at the offset. One small allocation per store; the
-    // whitelist has no span overload, so that cost is unavoidable.
+    // writes it into `__mem` at the offset. One small allocation per store.
+    //
+    // Measured alternatives, all worse:
+    //   Convert.__ToByte__SystemInt32 -> aborts in the VM, even in range
+    //   SystemArray.__SetValue__(object, i32) -> type check rejects the box
+    //   Int32Array.__Set__(i, v) -> works and allocates nothing, but
+    //     BitConverter.To* rejects an Int32Array, so every load would need
+    //     manual shifts; that is a different memory model, not a local change
+    // wasm2usharp makes the same choice: BitConverter.GetBytes(v).CopyTo(mem, i).
     StringRef SrcType;
     if (Ty->isIntegerTy(32) || Ty->isPointerTy()) SrcType = "SystemInt32";
     else if (Ty->isIntegerTy(64)) SrcType = "SystemInt64";

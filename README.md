@@ -168,10 +168,25 @@ of an alignment case analysis.
 * `load i8`/`i16` → the same window read, then mask, then sign-extend.
 * `store i32`/`i64`/`float`/`double` → `__GetBytes__` into a scratch slot, then
   `SystemByteArray.__CopyTo__`. **This allocates one small array per store**;
-  the whitelist has no span overload, so the cost is unavoidable and is
-  documented rather than hidden.
+  the whitelist has no span overload. Four cheaper-looking alternatives were
+  measured and all fail, so the cost is not a shortcut:
+
+  | Alternative | Result |
+  |---|---|
+  | `Convert.__ToByte__SystemInt32` + `SystemByteArray.__Set__` | `Convert` aborts in the VM, even in range |
+  | `SystemArray.__SetValue__(object, i32)` | runtime type check rejects the box into a `byte[]` |
+  | `Int32Array.__Set__(i, v)` (word array) | works, no allocation, but `BitConverter.To*` rejects an `Int32Array`, so every load would need manual shifts |
+  | `BitConverter.__ToInt32` on a word array | `EXCEPTION` — it requires `SystemByteArray` |
+
+  `wasm2usharp` makes the same choice for the same reason
+  (`BitConverter.GetBytes($p1).CopyTo(memory, idx)`). Switching to the word
+  model is possible — the plan's contingency — but it is a different memory
+  model, not a local optimisation: unaligned sub-word access becomes a
+  `p >> 2` plus a `(p & 3) * 8` shift with both straddle cases, and the globals
+  image would need a byte array anyway for `__CopyTo__`.
 * `store i8`/`i16` → one read-modify-write on the window: `(w & 0xFFFFFF00) |
-  (v & 0xFF)`.
+  (v & 0xFF)`. **No allocation**, because it stores a whole window rather than
+  a byte.
 
 An `alloca` that survives `mem2reg` lives in the shadow stack: `__sp` is a
 `%SystemInt32` starting at the region top, a function's frame is the sum of its
