@@ -1,0 +1,15 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import os
+
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_obj_root = "@CMAKE_BINARY_DIR@"
+config.llvm_udon = lit_config.substitute("@UDON_TOOL@")
+config.udon_vm = lit_config.substitute("@UDON_VM@")
+config.filecheck = lit_config.substitute("@FILECHECK@")
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+lit.llvm.llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
+
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

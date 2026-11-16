@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- netstandard2.1 so the Unity importer can reference the same assembly the
+       harness uses: the heap-image format is applied in exactly one place. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>Udon.Heap</AssemblyName>
+    <RootNamespace>Udon.Heap</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- The heap-image library talks to IUdonProgram/IUdonHeap, so it needs the
+       SDK's common assembly. Set VrcSdkDir to relocate the SDK. -->
+  <PropertyGroup>
+    <VrcSdkDir Condition="'$(VrcSdkDir)' == ''">C:\GitHub\VRChat\llvm-udon\Packages</VrcSdkDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VRC.Udon.Common">
+      <HintPath>$(VrcSdkDir)\com.vrchat.worlds\Runtime\Udon\External\VRC.Udon.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(VrcSdkDir)\com.vrchat.base\Runtime\VRCSDK\Dependencies\Managed\System.Collections.Immutable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

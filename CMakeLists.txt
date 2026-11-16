@@ -1,0 +1,91 @@
+# Builds either in-tree (as an llvm/projects entry) or standalone against an
+# installed LLVM. Standalone is how this is meant to be used during
+# development: it links the already-built LLVM libraries, so a rebuild takes
+# seconds instead of the half hour LLVM itself needs.
+#
+#   cmake -S . -B build -G Ninja -DLLVM_DIR=<llvm-build>/lib/cmake/llvm
+
+if (NOT DEFINED LLVM_VERSION_MAJOR)
+  cmake_minimum_required(VERSION 3.20)
+  set(USE_SYSTEM_LLVM 1)
+
+  if (NOT LLVM_DIR)
+    message(FATAL_ERROR
+      "Set -DLLVM_DIR=<path>/lib/cmake/llvm (the build tree works too).")
+  endif()
+
+  # project() is what fixes the compiler flags, so the build type has to be
+  # known first. It is only available from LLVM's config: LLVMConfig.cmake sets
+  # LLVM_BUILD_TYPE.
+  #
+  # Enabling a language is what makes LLVMConfig's find_package(ZLIB)/zstd/
+  # LibXml2 see the compiler's library directories -- without one they fail to
+  # find the multiarch path and configure dies on a missing ZLIB::ZLIB. Doing so
+  # also defaults CMAKE_BUILD_TYPE to Debug, so a user's choice is remembered
+  # and LLVM's is put back otherwise.
+  project(udon-build-type-probe NONE)
+  if (CMAKE_BUILD_TYPE)
+    set(UDON_BUILD_TYPE_GIVEN 1)
+  endif()
+  enable_language(CXX)
+  set(UDON_LLVM_VERSION 22.1 CACHE STRING "LLVM version to build against")
+  find_package(LLVM ${UDON_LLVM_VERSION} REQUIRED CONFIG)
+  if (NOT UDON_BUILD_TYPE_GIVEN)
+    set(CMAKE_BUILD_TYPE "${LLVM_BUILD_TYPE}" CACHE STRING "" FORCE)
+  endif()
+
+  # The Windows release tarball records the DIA SDK path of the machine that
+  # built it, which is not necessarily where DIA is installed, or whether it is
+  # installed at all. DIA is reached only through LLVMSymbolize, which nothing
+  # here links, so an entry naming a file that is not there is dropped instead
+  # of failing the link.
+  if (TARGET LLVMDebugInfoPDB)
+    get_target_property(UDON_PDB_DEPS LLVMDebugInfoPDB INTERFACE_LINK_LIBRARIES)
+    if (UDON_PDB_DEPS)
+      set(UDON_PDB_KEPT)
+      foreach(DEP IN LISTS UDON_PDB_DEPS)
+        if (DEP MATCHES "diaguids\\.lib$" AND NOT EXISTS "${DEP}")
+          continue()
+        endif()
+        list(APPEND UDON_PDB_KEPT "${DEP}")
+      endforeach()
+      set_target_properties(LLVMDebugInfoPDB PROPERTIES
+                            INTERFACE_LINK_LIBRARIES "${UDON_PDB_KEPT}")
+    endif()
+  endif()
+
+  project(llvm-udon CXX)
+  message(STATUS "Using LLVM ${LLVM_PACKAGE_VERSION} from ${LLVM_DIR}")
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+  if (NOT CMAKE_BUILD_TYPE STREQUAL LLVM_BUILD_TYPE)
+    message(WARNING
+      "CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE} but LLVM was built as "
+      "${LLVM_BUILD_TYPE}; linking will likely fail.")
+  endif()
+
+  include_directories(${LLVM_INCLUDE_DIRS})
+  add_definitions(${LLVM_DEFINITIONS})
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  include(AddLLVM)
+  set(CMAKE_CXX_STANDARD 17)
+
+endif()
+
+# Target names differ between the two modes; the artifact names do not.
+if (USE_SYSTEM_LLVM)
+  set(UDON_CODEGEN_TARGET LLVMUDONCodeGenStandalone)
+  set(UDON_INFO_TARGET LLVMUDONInfoStandalone)
+  set(UDON_TOOL_TARGET llvm-udon-standalone)
+else()
+  set(UDON_CODEGEN_TARGET LLVMUDONCodeGen)
+  set(UDON_INFO_TARGET LLVMUDONInfo)
+  set(UDON_TOOL_TARGET llvm-udon)
+endif()
+
+add_subdirectory(lib)
+add_subdirectory(tools)
+
+if (LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()

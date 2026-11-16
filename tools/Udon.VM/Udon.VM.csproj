@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>udon-vm</AssemblyName>
+    <RootNamespace>Udon.VM</RootNamespace>
+    <NoWarn>CS0436;CS1701;CS1702</NoWarn>
+    <!-- The SDK DLLs are netstandard2.1 and reference an older Immutable; the
+         net9 build is fine with them but the SDK's own targets warn. -->
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <!-- Set VrcSdkDir to relocate the VRChat SDK packages. -->
+  <PropertyGroup>
+    <VrcSdkDir Condition="'$(VrcSdkDir)' == ''">C:\GitHub\VRChat\llvm-udon\Packages</VrcSdkDir>
+    <VrcManagedDir>$(VrcSdkDir)\com.vrchat.base\Runtime\VRCSDK\Dependencies\Managed</VrcManagedDir>
+    <VrcUdonDir>$(VrcSdkDir)\com.vrchat.worlds\Runtime\Udon\External</VrcUdonDir>
+    <VrcUdonEditorDir>$(VrcSdkDir)\com.vrchat.worlds\Editor\Udon\External</VrcUdonEditorDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VRC.Udon.Common">
+      <HintPath>$(VrcUdonDir)\VRC.Udon.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="VRC.Udon.VM">
+      <HintPath>$(VrcUdonDir)\VRC.Udon.VM.dll</HintPath>
+    </Reference>
+    <Reference Include="VRC.Udon.ClientBindings">
+      <HintPath>$(VrcUdonDir)\VRC.Udon.ClientBindings.dll</HintPath>
+    </Reference>
+    <Reference Include="VRC.Udon.UAssembly">
+      <HintPath>$(VrcUdonEditorDir)\VRC.Udon.UAssembly.dll</HintPath>
+    </Reference>
+    <Reference Include="Collections.Pooled">
+      <HintPath>$(VrcManagedDir)\Collections.Pooled.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(VrcManagedDir)\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Udon.Heap\Udon.Heap.csproj" />
+  </ItemGroup>
+
+</Project>

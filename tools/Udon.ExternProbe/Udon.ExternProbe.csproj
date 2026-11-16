@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Probes the real SDK wrapper for every candidate extern signature and
+       reports which ones resolve. Drives scripts/gen-externs.py without needing
+       a running Unity editor: VRC.Udon.Wrapper.UdonWrapper constructs in plain
+       .NET once its two service interfaces are stubbed, and then answers
+       GetExternFunctionParameterCount / GetExternFunctionDelegate exactly as the
+       editor would. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>udon-extern-probe</AssemblyName>
+    <RootNamespace>Udon.ExternProbe</RootNamespace>
+    <NoWarn>CS0436;CS1701;CS1702</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VrcSdkDir Condition="'$(VrcSdkDir)' == ''">C:\GitHub\VRChat\llvm-udon\Packages</VrcSdkDir>
+    <VrcManagedDir>$(VrcSdkDir)\com.vrchat.base\Runtime\VRCSDK\Dependencies\Managed</VrcManagedDir>
+    <VrcUdonDir>$(VrcSdkDir)\com.vrchat.worlds\Runtime\Udon\External</VrcUdonDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VRC.Udon.Common">
+      <HintPath>$(VrcUdonDir)\VRC.Udon.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="VRC.Udon.Wrapper">
+      <HintPath>$(VrcUdonDir)\VRC.Udon.Wrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Collections.Pooled">
+      <HintPath>$(VrcManagedDir)\Collections.Pooled.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(VrcManagedDir)\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

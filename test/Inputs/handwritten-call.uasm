@@ -1,0 +1,51 @@
+.data_start
+    .export __result
+    __a: %UnityEngineVector3, null
+    __b: %UnityEngineVector3, null
+    __sum: %UnityEngineVector3, null
+    __result: %UnityEngineVector3, null
+    __ret: %SystemUInt32, 0x000000B8
+    __main_ret: %SystemUInt32, 0x000000B8
+    __haltaddr: %SystemUInt32, 0xFFFFFFFF
+    _one: %SystemSingle, 1
+    _two: %SystemSingle, 2
+    _three: %SystemSingle, 3
+    _ten: %SystemSingle, 10
+    _twenty: %SystemSingle, 20
+    _thirty: %SystemSingle, 30
+.data_end
+.code_start
+    .export _start
+    .export _main
+    .export _main_ret
+    _start:
+        PUSH, _one
+        PUSH, _two
+        PUSH, _three
+        PUSH, __a
+        EXTERN, "UnityEngineVector3.__ctor__SystemSingle_SystemSingle_SystemSingle__UnityEngineVector3"
+        PUSH, _ten
+        PUSH, _twenty
+        PUSH, _thirty
+        PUSH, __b
+        EXTERN, "UnityEngineVector3.__ctor__SystemSingle_SystemSingle_SystemSingle__UnityEngineVector3"
+        PUSH, __main_ret
+        PUSH, __ret
+        COPY
+        PUSH, __a
+        PUSH, __b
+        JUMP, _main
+    _main:
+        PUSH, __a
+        PUSH, __b
+        PUSH, __sum
+        EXTERN, "UnityEngineVector3.__op_Addition__UnityEngineVector3_UnityEngineVector3__UnityEngineVector3"
+        PUSH, __sum
+        PUSH, __result
+        COPY
+        JUMP_INDIRECT, __ret
+    _main_ret:
+        PUSH, __result
+        EXTERN, "UnityEngineDebug.__Log__SystemObject__SystemVoid"
+        JUMP_INDIRECT, __haltaddr
+.code_end

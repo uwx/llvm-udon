@@ -1,0 +1,18 @@
+# CMake and the compiler's output.
+build/
+
+# The .NET projects' output. `tools/Udon.Heap/bin/Release/netstandard2.1` is
+# where the DLL the Unity importer loads comes from; it is copied into the Unity
+# project rather than committed here.
+tools/*/bin/
+tools/*/obj/
+
+# The harness writes nothing into the tree, but a manual run against a fixture
+# beside it would land here.
+test/Output/
+
+# lit records per-test timings; they differ on every machine.
+.lit_test_times.txt
+
+# A driver run against a fixture writes its output beside the input.
+*.uasm.tmp
