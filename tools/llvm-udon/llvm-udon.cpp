@@ -62,6 +62,11 @@ static cl::opt<uint64_t> MemoryBytes(
     cl::desc("End of the globals image, i.e. the byte offset where the shadow "
              "stack begins"),
     cl::init(1u << 20));
+static cl::opt<uint64_t> HeapBytes(
+    "udon-heap-bytes",
+    cl::desc("Bytes of malloc heap between the globals image and the shadow "
+             "stack; 0 for a program that never calls malloc"),
+    cl::init(0));
 static cl::opt<uint64_t> ShadowStackBytes(
     "udon-shadow-stack-bytes", cl::desc("Bytes of alloca shadow stack"),
     cl::init(1u << 16));
@@ -82,6 +87,10 @@ static cl::opt<bool> ExportLabels(
     "udon-export-labels",
     cl::desc("Export every internal label with a __ prefix (test only)"),
     cl::init(false));
+static cl::opt<bool> ExportMemory(
+    "udon-export-memory",
+    cl::desc("Export __mem itself so a host can read and write it by name"),
+    cl::init(false));
 
 /// Validate the size flags before anything is written, so a bad flag is one
 /// line rather than a program that assembles and then misbehaves.
@@ -90,6 +99,12 @@ static bool validateOptions() {
     errs() << "llvm-udon: error: -udon-memory-bytes must be a positive "
               "multiple of 16, got "
            << MemoryBytes << "\n";
+    return false;
+  }
+  if (HeapBytes % 16 != 0) {
+    errs() << "llvm-udon: error: -udon-heap-bytes must be a multiple of 16, "
+              "got "
+           << HeapBytes << "\n";
     return false;
   }
   if (ShadowStackBytes == 0 || ShadowStackBytes % 16 != 0) {
@@ -136,24 +151,20 @@ int main(int argc, char **argv) {
   // bytes, and every pointer is a byte offset. A module built for a
   // big-endian or 64-bit-pointer target would silently miscompile, so check
   // rather than trust.
-  DataLayout DL(M->getDataLayoutStr().empty() ? "" : M->getDataLayoutStr());
-  if (M->getDataLayoutStr().empty()) {
-    // No layout at all: the module is target-independent IR, so give it ours.
-    std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(Triple("udon"), Error);
-    if (!TheTarget) {
-      errs() << argv[0] << ": " << Error << "\n";
-      return 1;
-    }
-    std::unique_ptr<TargetMachine> Probe(TheTarget->createTargetMachine(
-        Triple(M->getTargetTriple()), "", "", TargetOptions(), std::nullopt));
-    if (!Probe) {
-      errs() << argv[0] << ": could not create the UDON target machine\n";
-      return 1;
-    }
-    M->setDataLayout(Probe->createDataLayout());
-  } else {
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(Triple("udon"), Error);
+  if (!TheTarget) {
+    errs() << argv[0] << ": " << Error << "\n";
+    return 1;
+  }
+  std::unique_ptr<TargetMachine> Probe(TheTarget->createTargetMachine(
+      Triple(M->getTargetTriple()), "", "", TargetOptions(), std::nullopt));
+  if (!Probe) {
+    errs() << argv[0] << ": could not create the UDON target machine\n";
+    return 1;
+  }
+
+  if (!M->getDataLayoutStr().empty()) {
     const DataLayout &Layout = M->getDataLayout();
     if (!Layout.isLittleEndian() || Layout.getPointerSizeInBits() != 32 ||
         Layout.getTypeSizeInBits(Type::getInt64Ty(Context)) != 64) {
@@ -165,22 +176,26 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(Triple("udon"), Error);
-  if (!TheTarget) {
-    errs() << argv[0] << ": " << Error << "\n";
-    return 1;
-  }
+  // Adopt this target's layout unconditionally. A frontend's 32-bit layout
+  // agrees with it on everything the writer depends on -- byte order, pointer
+  // width, and the alignment of i32, i64, f32 and f64 -- but not on the entries
+  // that only affect IR the frontend has already generated (native integer
+  // widths, x87 long double, stack alignment). Keeping the frontend's would
+  // make the runtime module's layout differ from the program's, which the linker
+  // reports as a mismatch on every compile.
+  M->setDataLayout(Probe->createDataLayout());
 
   // The registry's constructor signature is fixed, so the writer options go
   // through a process-wide accessor instead.
   UDONOptions &Opts = udonWriterOptions();
   Opts.MemoryBytes = MemoryBytes;
+  Opts.HeapBytes = HeapBytes;
   Opts.ShadowStackBytes = ShadowStackBytes;
   Opts.StackDepth = StackDepth;
   Opts.HeapSlots = HeapSlots;
   Opts.LinkRuntime = !NoRuntime;
   Opts.ExportLabels = ExportLabels;
+  Opts.ExportMemory = ExportMemory;
   Opts.ManifestPath = ManifestPath;
 
   // The runtime IR lives beside the executable in a build tree and beside the

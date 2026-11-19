@@ -71,7 +71,13 @@ void UDONWriter::buildCallGraph() {
   for (Function &F : *Mod) {
     if (F.isDeclaration())
       continue;
-    if (F.hasAddressTaken())
+    // An externally visible definition is also a possible indirect target: any
+    // other module -- or the host -- can reach it through the linker, and this
+    // writer never sees that call site. C compiles every non-static function
+    // this way, so treating only `hasAddressTaken` as an entry point would give
+    // an ordinary recursive C function a static frame and let the inner
+    // activation overwrite the outer one.
+    if (F.hasAddressTaken() || !F.hasLocalLinkage())
       AddressTaken.push_back(&F);
     for (BasicBlock &BB : F)
       for (Instruction &I : BB) {
@@ -145,6 +151,12 @@ void UDONWriter::buildCallGraph() {
   // slots are reachable from a call site the writer cannot see.
   for (const Function *F : AddressTaken)
     RecursiveFunctions.insert(F);
+  if (getenv("UDON_DEBUG_CG"))
+    for (const Function &F : *Mod)
+      if (!F.isDeclaration())
+        errs() << "CG " << F.getName() << " local=" << F.hasLocalLinkage()
+               << " addr=" << F.hasAddressTaken()
+               << " rec=" << (RecursiveFunctions.count(&F) ? 1 : 0) << "\n";
 
   // Re-entrancy is transitive: a function that can reach an extern which may
   // synchronously run Udon code inherits the property.

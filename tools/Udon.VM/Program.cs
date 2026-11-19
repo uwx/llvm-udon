@@ -2,10 +2,7 @@
 //
 //   udon-vm run <program.uasm> [--heap-json <json>] [--entry <name>]...
 //                              [--stubs <json>] [--trace] [--time-limit]
-//                              [--repeat N] [--heap-slots N]
-//   udon-vm assemble <program.uasm> --heap-slots N
-//   udon-vm arity <signature>
-//   udon-vm verify <program.uasm>
+//                              [--repeat N] [--heap-slots N] [--profile]
 //
 // Exit codes: 0 when every invocation returned or threw, 1 when an invocation
 // hit a VM error or the harness itself failed.
@@ -32,7 +29,8 @@ namespace Udon.VM
             Console.Error.WriteLine(
                 "usage: udon-vm run <program.uasm> [--heap-json <json>] [--entry <name>]...\n" +
                 "                        [--stubs <json>] [--trace] [--time-limit]\n" +
-                "                        [--repeat N] [--heap-slots N]\n" +
+                "                        [--repeat N] [--heap-slots N] [--rom <rom>]\n" +
+                "                        [--dump-symbol <name>=<path>]... [--profile]\n" +
                 "       udon-vm assemble <program.uasm> --heap-slots N\n" +
                 "       udon-vm arity <signature>\n" +
                 "       udon-vm verify <program.uasm>");
@@ -71,7 +69,9 @@ namespace Udon.VM
                 {
                     // Skip the value of a flag that takes one.
                     if (args[i] == "--heap-json" || args[i] == "--entry" || args[i] == "--stubs" ||
-                        args[i] == "--repeat" || args[i] == "--heap-slots")
+                        args[i] == "--repeat" || args[i] == "--heap-slots" ||
+                        args[i] == "--rom" || args[i] == "--dump-symbol" ||
+                        args[i] == "--profile-entry")
                         i++;
                     continue;
                 }
@@ -132,8 +132,9 @@ namespace Udon.VM
                 return 1;
             }
 
+            bool profiling = args.Contains("--profile");
             var runner = new EventRunner(uasm, FlagValue(args, "--heap-json"), slots == 0 ? 4096u : slots,
-                                         registry, Console.Out, args.Contains("--trace"));
+                                         registry, Console.Out, args.Contains("--trace"), profiling);
             try
             {
                 runner.Start();
@@ -155,7 +156,17 @@ namespace Udon.VM
             Stubs.SendCustomEvent = name =>
             {
                 try { runner.Reenter(name); }
-                catch (Exception ex) { Console.Error.WriteLine("udon-vm: " + ex.Message); throw; }
+                catch (Exception ex)
+                {
+                    // The VM wraps every extern failure in a bare
+                    // `UdonVMException`; the cause names the extern, so print
+                    // the whole chain when tracing is on.
+                    if (Environment.GetEnvironmentVariable("UDON_TRACE") != null)
+                        for (var e = ex; e != null; e = e.InnerException)
+                            Console.Error.WriteLine("  trace: " + e.GetType().Name +
+                                                    ": " + e.Message);
+                    throw;
+                }
             };
 
             if (entries.Count == 0)
@@ -167,11 +178,41 @@ namespace Udon.VM
                 return 1;
             }
 
+            // The ROM window lives inside `__mem`, which the writer's inlined
+            // init block creates on the first entry invocation. So a ROM run
+            // is: run `prepare` (init block only), copy the ROM in, then run
+            // whatever entries the caller asked for -- normally `boot`.
+            string romPath = FlagValue(args, "--rom");
+            if (romPath != null)
+            {
+                if (!File.Exists(romPath))
+                {
+                    Console.Error.WriteLine("udon-vm: no such ROM: " + romPath);
+                    return 1;
+                }
+                if (!runner.Invoke("prepare")) return 1;
+                runner.InstallRom(romPath);
+            }
+
+            string profileEntry = FlagValue(args, "--profile-entry");
             for (int n = 0; n < repeat; n++)
                 foreach (string entry in entries)
+                {
+                    if (profiling && profileEntry != null && entry == profileEntry)
+                        runner.ResetProfile();
                     if (!runner.Invoke(entry))
                         return 1;
+                }
 
+            for (int i = 1; i + 1 < args.Length; i++)
+                if (args[i] == "--dump-symbol")
+                {
+                    int eq = args[i + 1].IndexOf('=');
+                    if (eq > 0)
+                        runner.AddDump(args[i + 1].Substring(0, eq), args[i + 1].Substring(eq + 1));
+                }
+            runner.WriteDumps();
+            runner.WriteProfile();
             return 0;
         }
 

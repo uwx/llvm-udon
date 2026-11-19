@@ -24,17 +24,32 @@ inline std::string mangle(StringRef Name) { return mangleName(Name); }
 } // namespace
 
 void UDONWriter::declareProgramSlots() {
-  // The memory array. `__mem` is `-udon-memory-bytes + -udon-shadow-stack-bytes
-  // + 8` bytes: the globals image, the shadow stack above it, and the 8 pad
-  // bytes that make a sub-word window read always in bounds.
-  uint64_t MemorySize = Opts.MemoryBytes + Opts.ShadowStackBytes + 8;
-  declareSlot("__mem", "SystemByteArray");
-  NullSlots.push_back({"__mem", "SystemByteArray"});
+  // The memory array is a WORD array, not a byte array.
+  //
+  // A byte array forces every scalar store through
+  // `BitConverter.GetBytes(v).CopyTo(mem, p)`, which allocates a fresh array
+  // per store -- measured at 32 bytes, 152.6 MB per 5M stores. A word array
+  // stores with `Int32Array.__Set__(i, v)`, which allocates nothing.
+  //
+  // The cost is on the load side: `BitConverter.To*` rejects an `Int32Array`,
+  // so a load is `__Get__` plus shifts, and an unaligned load spans two words.
+  // Measured 1.7x slower for the unaligned case, a wash for the aligned one.
+  // That is the trade this model makes, deliberately.
+  //
+  // `__mem` is still addressed in BYTES everywhere else -- a pointer is a byte
+  // offset -- so every access converts with `p >> 2` for the word index and
+  // `(p & 3) * 8` for the bit shift.
+  uint64_t MemorySize = Opts.MemoryBytes + Opts.HeapBytes +
+                        Opts.ShadowStackBytes + 8;
+  uint64_t WordCount = (MemorySize + 3) / 4;
+  declareSlot("__mem", "SystemInt32Array");
+  NullSlots.push_back({"__mem", "SystemInt32Array"});
   MemorySizeBytes = MemorySize;
+  MemoryWordCount = WordCount;
 
-  // The globals image, copied into `__mem` at offset 16 by init.
-  declareSlot("__data_image", "SystemByteArray");
-  NullSlots.push_back({"__data_image", "SystemByteArray"});
+  // The globals image, as words so init copies it with one `__CopyTo__`.
+  declareSlot("__data_image", "SystemInt32Array");
+  NullSlots.push_back({"__data_image", "SystemInt32Array"});
 
   // The shadow-stack pointer and the caller-save cursors. `__sp` is
   // `%SystemInt32` because the prologue uses the signed subtraction operator
@@ -46,7 +61,8 @@ void UDONWriter::declareProgramSlots() {
   declareSlot("__sp", "SystemInt32");
   DataLines.push_back("    __sp: %SystemInt32, " +
                       std::to_string(static_cast<int32_t>(
-                          Opts.MemoryBytes + Opts.ShadowStackBytes)));
+                          Opts.MemoryBytes + Opts.HeapBytes +
+                              Opts.ShadowStackBytes)));
 
   declareSlot("__depth", "SystemInt32");
   DataLines.push_back("    __depth: %SystemInt32, 0");
@@ -135,6 +151,7 @@ unsigned UDONWriter::emitEntryPrologue(UFunction &UF, unsigned StubIdx) {
     UBlock &Reset = UF.Blocks[ResetIdx];
     emitCopy(Reset,
              i32Constant(static_cast<int32_t>(Opts.MemoryBytes +
+                                              Opts.HeapBytes +
                                               Opts.ShadowStackBytes)),
              "__sp");
     for (const char *Cursor : {"__sptr_i32", "__sptr_i64", "__sptr_f32",
@@ -165,11 +182,17 @@ unsigned UDONWriter::emitEntryPrologue(UFunction &UF, unsigned StubIdx) {
   {
     unsigned InitIdx = appendBlock(UF, InitLabel);
     UBlock &Init = UF.Blocks[InitIdx];
-    emitExtern(Init, "SystemByteArray.__ctor__SystemInt32__SystemByteArray",
-               {i32Constant(static_cast<int32_t>(MemorySizeBytes))}, "__mem");
+    // Allocate the WORD array. `__mem` is addressed in bytes everywhere else,
+    // so the element count is the byte size rounded up to whole words.
+    emitExtern(Init, "SystemInt32Array.__ctor__SystemInt32__SystemInt32Array",
+               {i32Constant(static_cast<int32_t>(MemoryWordCount))}, "__mem");
+
+    // Copy the globals image in. Both sides are word arrays, so this is one
+    // `__CopyTo__` at word offset 4 (byte offset 16) -- no unrolled per-word
+    // store, which would cost a heap slot per word.
     emitExtern(Init,
-               "SystemByteArray.__CopyTo__SystemArray_SystemInt32__SystemVoid",
-               {"__data_image", "__mem", i32Constant(16)}, "");
+               "SystemInt32Array.__CopyTo__SystemArray_SystemInt32__SystemVoid",
+               {"__data_image", "__mem", i32Constant(4)}, "");
     // Allocate each caller-save stack at `-udon-stack-depth` entries.
   for (const auto &[Stack, Type] :
        {std::pair<const char *, const char *>{"__stack_i32", "SystemInt32Array"},
@@ -233,7 +256,8 @@ unsigned UDONWriter::emitFramePush(const Function &F, UFunction &UF,
   // ends -- that is, `-udon-memory-bytes`. It is NOT a negative address: `__sp`
   // starts at `-udon-memory-bytes + -udon-shadow-stack-bytes`, both of which are
   // ordinary positive byte offsets into `__mem`.
-  std::string Floor = i32Constant(static_cast<int32_t>(Opts.MemoryBytes));
+  std::string Floor =
+      i32Constant(static_cast<int32_t>(Opts.MemoryBytes + Opts.HeapBytes));
   std::string Ok = freshSlot("sp_ok", Type::getInt1Ty(Mod->getContext()));
   emitExtern(B,
              "SystemInt32.__op_GreaterThanOrEqual__SystemInt32_SystemInt32__"

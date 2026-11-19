@@ -103,28 +103,18 @@ bool isUnsignedPredicate(CmpInst::Predicate P) {
 
 // --- block plumbing --------------------------------------------------------
 
+std::string UDONWriter::freshLabelStem(StringRef Hint) {
+  return mangle(Cur->F->getName()) + "_" + Hint.str() + "_" +
+         std::to_string(LabelCounter++);
+}
+
 unsigned UDONWriter::appendBlock(UFunction &UF, const std::string &Label) {
-  // Labels must be unique within the whole program, not just the function: the
-  // assembler rejects a repeat, and a duplicate is an AliasedSymbolException.
-  // A suffix is cheaper than proving every naming site is disjoint.
-  StringSet<> Existing;
-  for (const UFunction &Other : Functions) {
-    // `Cur` points at the function being selected, which is not yet in
-    // `Functions`, so its own blocks must be scanned separately below.
-    if (&Other == Cur)
-      continue;
-    for (const UBlock &B : Other.Blocks)
-      Existing.insert(B.Label);
-  }
-  for (const UBlock &B : UF.Blocks)
-    Existing.insert(B.Label);
-
-  std::string Unique = Label;
-  for (unsigned N = 1; Existing.count(Unique); N++)
-    Unique = Label + "_" + std::to_string(N);
-
+  // The label is used verbatim. Renaming it here would break the caller, which
+  // holds the same string as a jump target -- and uniqueness is already
+  // guaranteed: basic-block labels are `<fn>_<bb>`, and every split names its
+  // blocks from `freshLabelStem`, which is program-unique.
   UBlock B;
-  B.Label = Unique;
+  B.Label = Label;
   UF.Blocks.push_back(std::move(B));
   return static_cast<unsigned>(UF.Blocks.size() - 1);
 }
@@ -139,13 +129,9 @@ unsigned UDONWriter::emitDiamond(UFunction &UF, unsigned &Idx,
   // `Idx` -- not `back()`, because the function's basic blocks were preallocated
   // and the block being filled is rarely the last one.
   UBlock &B = UF.Blocks[Idx];
-  // A dedicated counter, not the temporary one: two diamonds with the same
-  // hint must not collide even when the caller reuses a temporary name.
-  // The block count is the uniqueness source: it cannot be stale or reset,
-  // because `appendBlock` is what increments it.
-  std::string Base = mangle(Cur->F->getName()) + "_" + Hint + "_" +
-                     std::to_string(UF.Blocks.size()) + "_" +
-                     std::to_string(BlockCounter++);
+  // One stem, one counter increment: three separate `++`s in one expression
+  // would be unsequenced relative to each other and could repeat a value.
+  std::string Base = freshLabelStem(Hint);
   std::string TrueLabel = Base + "_t";
   std::string FalseLabel = Base + "_f";
   std::string JoinLabel = Base + "_j";
@@ -168,24 +154,45 @@ unsigned UDONWriter::emitDiamond(UFunction &UF, unsigned &Idx,
 // --- function selection ----------------------------------------------------
 
 void UDONWriter::selectFunction(const Function &F) {
-  UFunction UF;
+  // The function lives in `Functions` from the start, and `Cur` points there.
+  // Building it as a local and moving it in afterwards would leave `Cur`
+  // dangling into a moved-from object for the rest of selection, and every
+  // split block appended through `Cur` would land in the wrong container.
+  //
+  // `Functions` is a deque, so the reference survives later `push_back`s.
+  Functions.emplace_back();
+  Cur = &Functions.back();
+  UFunction &UF = *Cur;
   UF.F = &F;
   UF.BodyLabel = mangle(F.getName()) + "_body";
-  Cur = &UF;
   Slots.clear();
+  SignExtendedSlots.clear();
   TempCounter = 0;
 
   declareSlot(returnSlot(&F), "SystemUInt32");
   NullSlots.push_back({returnSlot(&F), "SystemUInt32"});
-  if (!F.getReturnType()->isVoidTy()) {
+  if (!F.getReturnType()->isVoidTy() &&
+      !isa<StructType>(F.getReturnType()) && !isa<ArrayType>(F.getReturnType())) {
     declareSlot(returnValueSlot(&F), udonTypeOf(F.getReturnType()));
     NullSlots.push_back({returnValueSlot(&F), udonTypeOf(F.getReturnType())});
   }
+  // An aggregate return value has no slot of its own: its fields are named
+  // `<retPrefix>_f<N>` on demand, where the retPrefix is the
+  // returnValueSlot name. Declared lazily by insertvalue/extractvalue users. 
 
   // Argument slots are part of the calling convention: a direct call copies its
   // arguments here before jumping to the body.
   for (unsigned A = 0; A < F.arg_size(); A++) {
     std::string Slot = mangle(F.getName()) + "_arg_" + std::to_string(A);
+    // An aggregate argument scalarises: its "slot" is a prefix and the fields
+    // are declared on demand by `aggFieldSlot`. Zig's by-value structs arrive
+    // this way, and the body reads them through extractvalue, so no typed slot
+    // for the whole aggregate is needed or even possible.
+    if (isa<StructType>(F.getArg(A)->getType()) ||
+        isa<ArrayType>(F.getArg(A)->getType())) {
+      Slots[F.getArg(A)] = Slot;
+      continue;
+    }
     std::string Ty = udonTypeOf(F.getArg(A)->getType());
     if (Ty.empty())
       reportUDONError("argument has no Udon type: " + F.getName());
@@ -240,9 +247,6 @@ void UDONWriter::selectFunction(const Function &F) {
   }
 
   buildEntryBlocks(F, UF);
-
-  Functions.push_back(std::move(UF));
-  Cur = &Functions.back();
 }
 
 void UDONWriter::selectBlock(const BasicBlock &BB, UFunction &UF,
@@ -254,6 +258,17 @@ void UDONWriter::selectBlock(const BasicBlock &BB, UFunction &UF,
     }
     selectInstruction(I, UF, Idx);
   }
+}
+
+/// The element type one aggregate level down: a struct's field or an array's
+/// element. Zig's by-value structs wrap arrays (`{ [16 x float] }`), so both
+/// shapes appear.
+static Type *aggElementAt(Type *Ty, unsigned Idx) {
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getElementType(Idx);
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getElementType();
+  return nullptr;
 }
 
 void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
@@ -314,8 +329,11 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
   }
   case Instruction::FNeg: {
     std::string Ty = operandType(I.getType());
-    emitExtern(B, Ty + ".__op_UnaryNegation__" + Ty + "__" + Ty,
-               {slotFor(I.getOperand(0))}, slotFor(&I));
+    // `fneg` is `0 - x`: the float types expose `UnaryMinus`, not
+    // `UnaryNegation` (that name belongs to Boolean and the Unity vectors).
+    std::string Zero = constantSlot(ConstantFP::get(I.getType(), 0.0));
+    emitExtern(B, binarySignature(Ty, "Subtraction"), {Zero, slotFor(I.getOperand(0))},
+               slotFor(&I));
     return;
   }
   case Instruction::FCmp:
@@ -338,19 +356,65 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
   case Instruction::SIToFP: {
     Type *DstTy = I.getType();
     Type *SrcTy = I.getOperand(0)->getType();
-    std::string Src = SrcTy->isIntegerTy(64) ? "SystemInt64" : "SystemInt32";
     std::string Dst = DstTy->isDoubleTy() ? "SystemDouble" : "SystemSingle";
-    emitExtern(B, "SystemConvert.__To" + Dst + "__" + Src + "__" + Dst,
-               {slotFor(I.getOperand(0))}, slotFor(&I));
+    std::string Op = DstTy->isDoubleTy() ? "Double" : "Single";
+    // A narrow (i8/i16) source lives in an Int32 slot, and the conversion
+    // externs only exist from Int32 and Int64 -- never from an Int32 slot that
+    // holds a narrow value. Sign-extend narrow sources to i64 first, exactly as
+    // the i32 path does for unsigned values: the signed `Convert.To*Int64` of a
+    // sign-extended i32 is the value's own sign-extension.
+    std::string Src = slotFor(I.getOperand(0));
+    unsigned Bits = SrcTy->getIntegerBitWidth();
+    if (Bits < 32) {
+      // Narrow sources: sign-extend to the i32 slot width, then convert from
+      // the Int32 slot directly. `__ToSingle__SystemInt32` is the one narrow
+      // shape the SDK has; there is no i16/i8 conversion extern.
+      //
+      // The mask that used to precede the left shift is redundant, exactly as
+      // in `emitLoad`: `(x << 24) >> 24` sign-extends the low byte of any x,
+      // so masking first costs one extern to change nothing. The value this
+      // receives is usually the output of an i8 `load`, which the load path
+      // already sign-extended -- a second mask-and-shift there was pure waste.
+      //
+      // A value that came straight from an `i8`/`i16` load is already
+      // sign-extended, so the widening pair would reproduce what it holds.
+      // `SignExtendedSlots` records exactly those; anything else (a `trunc`, a
+      // `phi`, a `select`) is unmarked and keeps the shifts.
+      if (!SignExtendedSlots.count(Src)) {
+        int32_t Shift = 32 - static_cast<int32_t>(Bits);
+        std::string L =
+            memBinop("LeftShift", Src, i32Constant(Shift), "sitofp_l", B);
+        std::string E =
+            memBinop("RightShift", L, i32Constant(Shift), "sitofp_r", B);
+        Src = E;
+      }
+    }
+    std::string From = Bits == 64 ? "SystemInt64" : "SystemInt32";
+    emitExtern(B, "SystemConvert.__To" + Op + "__" + From + "__" + Dst, {Src},
+               slotFor(&I));
     return;
   }
   case Instruction::UIToFP: {
     // Zero-extend to i64 first, then convert: an i32 above Int32.MaxValue is
     // negative in its slot, so a direct Convert would produce a negative float.
+    // A narrow (i8/i16) source is zero-extended the same way: mask to its own
+    // width first, because the high bits of the Int32 slot are unspecified.
     Type *DstTy = I.getType();
     Type *SrcTy = I.getOperand(0)->getType();
     std::string Dst = DstTy->isDoubleTy() ? "SystemDouble" : "SystemSingle";
+    std::string Op = DstTy->isDoubleTy() ? "Double" : "Single";
     std::string Wide = slotFor(I.getOperand(0));
+    if (SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) {
+      unsigned Bits = SrcTy->getIntegerBitWidth();
+      // Mask to the value's own width, then widen: the destination extern is
+      // `__To*__SystemInt64`, so the masked Int32 must become an Int64 slot.
+      std::string Masked =
+          memBinop("LogicalAnd", Wide, i32Constant(Bits == 8 ? 0xFF : 0xFFFF),
+                   "uitofp_n", B);
+      Wide = freshSlot("uitofp_w", Type::getInt64Ty(Mod->getContext()));
+      emitExtern(B, "SystemConvert.__ToInt64__SystemInt32__SystemInt64",
+                 {Masked}, Wide);
+    }
     if (SrcTy->isIntegerTy(32)) {
       Wide = freshSlot("uitofp_w", Type::getInt64Ty(Mod->getContext()));
       emitExtern(B, "SystemConvert.__ToInt64__SystemInt32__SystemInt64",
@@ -363,7 +427,7 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
                  Masked);
       Wide = Masked;
     }
-    emitExtern(B, "SystemConvert.__To" + Dst + "__SystemInt64__" + Dst, {Wide},
+    emitExtern(B, "SystemConvert.__To" + Op + "__SystemInt64__" + Dst, {Wide},
                slotFor(&I));
     return;
   }
@@ -450,6 +514,86 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
   case Instruction::GetElementPtr:
     selectGEP(cast<GetElementPtrInst>(I), UF, Idx);
     return;
+  case Instruction::ExtractValue: {
+    // Aggregates live as one slot per leaf field, named
+    // `<agg>_f<N>_f<M>...`, so an extract is a plain copy out of one leaf
+    // slot. The index list descends the type to find the leaf.
+    const auto &EV = cast<ExtractValueInst>(I);
+    std::string Leaf = slotFor(EV.getAggregateOperand());
+    Type *Ty = EV.getAggregateOperand()->getType();
+    for (unsigned Idx : EV.indices()) {
+      unsigned UIdx = static_cast<unsigned>(Idx);
+      Leaf += "_f" + std::to_string(UIdx);
+      Ty = aggElementAt(Ty, UIdx);
+      if (!Ty)
+        reportUDONError("extractvalue descends a non-aggregate: " + I.getName());
+    }
+    std::string LeafTy = udonTypeOf(Ty);
+    if (LeafTy.empty())
+      reportUDONError("aggregate leaf has no Udon type: " + I.getName());
+    if (!SlotTypes.count(Leaf)) {
+      declareSlot(Leaf, LeafTy);
+      NullSlots.push_back({Leaf, LeafTy});
+    }
+    emitCopy(B, Leaf, slotFor(&I));
+    return;
+  }
+  case Instruction::InsertValue: {
+    // Copy the fields the insert does not touch, then write the inserted
+    // one: a fresh prefix per insert, one COPY per field. Nested indices
+    // (`fca.0.1` = field 0's subfield 1) append to the prefix.
+    const auto &IV = cast<InsertValueInst>(I);
+    // Collect the leaf type by walking the indices.
+    Type *Ty = I.getType();
+    for (unsigned Idx : IV.indices()) {
+      auto *STy = cast<StructType>(Ty);
+      Ty = STy->getElementType(static_cast<unsigned>(Idx));
+    }
+    std::string LeafTy = udonTypeOf(Ty);
+    if (LeafTy.empty())
+      reportUDONError("insertvalue leaf has no Udon type: " + I.getName());
+    // The prefix of the DESTINATION and of the SOURCE aggregate.
+    std::string DstPrefix = slotFor(&I);
+    std::string SrcPrefix = slotFor(IV.getAggregateOperand());
+    // The path this insert replaces: everything except the last index is a
+    // prefix to COPY through.
+    SmallVector<unsigned, 4> Idxs;
+    for (unsigned Idx : IV.indices())
+      Idxs.push_back(Idx);
+    // 1. Copy every sibling at the top level that is NOT on the path.
+    auto *Top = cast<StructType>(I.getType());
+    unsigned TopIdx = Idxs.front();
+    for (unsigned F = 0; F < Top->getNumElements(); F++) {
+      if (F == TopIdx)
+        continue;
+      std::string STy2 = udonTypeOf(Top->getElementType(F));
+      if (STy2.empty())
+        continue; // nested aggregate handled below when needed
+      emitCopy(B, SrcPrefix + "_f" + std::to_string(F),
+               DstPrefix + "_f" + std::to_string(F));
+    }
+    // 2. The leaf write: build the leaf names.
+    std::string DstLeaf = DstPrefix;
+    std::string SrcLeaf = SrcPrefix;
+    Type *LT = I.getType();
+    for (unsigned Idx : Idxs) {
+      auto *STy = cast<StructType>(LT);
+      unsigned UIdx = Idx;
+      DstLeaf += "_f" + std::to_string(UIdx);
+      SrcLeaf += "_f" + std::to_string(UIdx);
+      LT = STy->getElementType(UIdx);
+    }
+    if (!SlotTypes.count(DstLeaf)) {
+      declareSlot(DstLeaf, LeafTy);
+      NullSlots.push_back({DstLeaf, LeafTy});
+    }
+    if (!SlotTypes.count(SrcLeaf)) {
+      declareSlot(SrcLeaf, LeafTy);
+      NullSlots.push_back({SrcLeaf, LeafTy});
+    }
+    emitCopy(B, slotFor(IV.getInsertedValueOperand()), DstLeaf);
+    return;
+  }
   case Instruction::BitCast:
     selectBitCast(I, UF, Idx);
     return;
@@ -488,6 +632,11 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
 
 void UDONWriter::selectTerminator(const Instruction &I, UFunction &UF,
                                   unsigned &Idx) {
+  // Not cached before the switch. Selecting this block's instructions may have
+  // split it (an unaligned word access appends a continuation), and the
+  // terminator belongs in the continuation: writing it into the closed block
+  // would leave the continuation empty, so control would fall through into
+  // whatever block happened to follow in layout order.
   UBlock &B = UF.Blocks[Idx];
   const BasicBlock *BB = I.getParent();
   switch (I.getOpcode()) {
@@ -623,21 +772,21 @@ std::string UDONWriter::edgeTarget(UFunction &UF, const BasicBlock *Pred,
   // One trampoline per (pred, succ) pair: a branch whose two edges share a
   // successor runs the same copies either way.
   std::string Label = blockLabel(Pred) + "_to_" + blockLabel(Succ);
-  auto It = UF.EdgeIndex.find(Succ);
+  auto Key = std::make_pair(Pred, Succ);
+  auto It = UF.EdgeIndex.find(Key);
   if (It != UF.EdgeIndex.end())
     return UF.Blocks[It->second].Label;
 
   unsigned Idx = appendBlock(UF, Label);
   emitPhiCopies(Pred, Succ, UF.Blocks[Idx]);
   UF.Blocks[Idx].Insts.push_back({UInst::JUMP, blockLabel(Succ)});
-  UF.EdgeIndex[Succ] = Idx;
+  UF.EdgeIndex[Key] = Idx;
   return Label;
 }
 
 // --- compares and casts ----------------------------------------------------
 
 void UDONWriter::selectICmp(const ICmpInst &I, UFunction &UF, unsigned &Idx) {
-  UBlock &B = UF.Blocks[Idx];
   CmpInst::Predicate P = I.getPredicate();
   Type *OpTy = I.getOperand(0)->getType();
   std::string Ty = operandType(OpTy);
@@ -647,18 +796,55 @@ void UDONWriter::selectICmp(const ICmpInst &I, UFunction &UF, unsigned &Idx) {
   std::string LHS = slotFor(I.getOperand(0));
   std::string RHS = slotFor(I.getOperand(1));
 
+  // Width normalization. A value of a type narrower than a slot must be brought
+  // to the slot's width *in the comparison's sense* before comparing: a signed
+  // comparison sign-extends, an unsigned or equality comparison zero-extends.
+  //
+  // Skipping this is a miscompile, not an inefficiency: `(char)0xD0 < 10`
+  // unsigned is false, but a sign-extended -48 is less than 10 in a 32-bit
+  // signed compare, and the unsigned XOR trick cannot repair that -- the sign
+  // bit of a byte is not bit 31. A digit-range test written that way loops
+  // forever, because the byte after the digits reads as a valid digit.
+  unsigned OpBits = OpTy->isPointerTy() ? 32 : OpTy->getIntegerBitWidth();
+  bool Narrow = !OpTy->isPointerTy() && OpBits < 32;
+
+  auto Extend = [&](const std::string &Slot, bool Signed) {
+    if (!Narrow)
+      return Slot;
+    int32_t Mask = OpBits == 8 ? 0xFF : 0xFFFF;
+    std::string M = memBinop("LogicalAnd", Slot, i32Constant(Mask), "ext1",
+                             UF.Blocks[Idx]);
+    if (!Signed)
+      return M;
+    int32_t Shift = 32 - static_cast<int32_t>(OpBits);
+    std::string L = memBinop("LeftShift", M, i32Constant(Shift), "ext2",
+                             UF.Blocks[Idx]);
+    return memBinop("RightShift", L, i32Constant(Shift), "ext3",
+                    UF.Blocks[Idx]);
+  };
+
+  if (Narrow) {
+    bool Signed = CmpInst::isSigned(P);
+    LHS = Extend(LHS, Signed);
+    RHS = Extend(RHS, Signed);
+  }
+
   // Unsigned compares XOR both sides with the sign bit and use the signed
   // predicate: Udon has no unsigned operators on these slot types, and the XOR
   // costs one extern with no allocation. Verified: -1 < 1 unsigned is false.
   if (isUnsignedPredicate(P)) {
-    unsigned Bits = OpTy->getIntegerBitWidth();
-    uint64_t MaskBits = Bits == 64 ? 0x8000000000000000ull : 0x80000000ull;
-    std::string Mask = constantSlot(ConstantInt::get(OpTy, MaskBits));
-    std::string X = freshSlot("uxor_l", OpTy);
-    emitExtern(B, binarySignature(Ty, "LogicalXor"), {LHS, Mask}, X);
-    std::string Y = freshSlot("uxor_r", OpTy);
-    emitExtern(B, binarySignature(Ty, "LogicalXor"), {RHS, Mask}, Y);
-    emitExtern(B,
+    bool Wide = OpBits == 64;
+    uint64_t MaskBits = Wide ? 0x8000000000000000ull : 0x80000000ull;
+    // The mask must have the comparison's width, which after normalization is
+    // 32 bits for every narrow type. Building it from a narrow type truncates
+    // the constant to zero and silently disables the trick.
+    Type *MaskTy = Wide ? OpTy : Type::getInt32Ty(OpTy->getContext());
+    std::string Mask = constantSlot(ConstantInt::get(MaskTy, MaskBits));
+    std::string X = freshSlot("uxor_l", MaskTy);
+    emitExtern(UF.Blocks[Idx], binarySignature(Ty, "LogicalXor"), {LHS, Mask}, X);
+    std::string Y = freshSlot("uxor_r", MaskTy);
+    emitExtern(UF.Blocks[Idx], binarySignature(Ty, "LogicalXor"), {RHS, Mask}, Y);
+    emitExtern(UF.Blocks[Idx],
                compareSignature(Ty,
                                 icmpPredicateName(signedEquivalentOfUnsigned(P))),
                {X, Y}, slotFor(&I));
@@ -668,7 +854,8 @@ void UDONWriter::selectICmp(const ICmpInst &I, UFunction &UF, unsigned &Idx) {
   StringRef Op = icmpPredicateName(P);
   if (Op.empty())
     reportUDONError("unsupported icmp predicate: " + I.getName());
-  emitExtern(B, compareSignature(Ty, Op), {LHS, RHS}, slotFor(&I));
+  emitExtern(UF.Blocks[Idx], compareSignature(Ty, Op), {LHS, RHS}, slotFor(&I));
+
 }
 
 void UDONWriter::selectSelect(const SelectInst &I, UFunction &UF,
@@ -712,13 +899,32 @@ void UDONWriter::selectZExt(const Instruction &I, UFunction &UF,
   UBlock &B = UF.Blocks[Idx];
   Type *DstTy = I.getType();
   Type *SrcTy = I.getOperand(0)->getType();
-  if (SrcTy->isIntegerTy(1) && DstTy->isIntegerTy(32)) {
+  // Narrow integers all live in `%SystemInt32` slots, so an extension to i8 or
+  // i16 is the same operation as one to i32.
+  bool DstNarrow =
+      DstTy->isIntegerTy(32) || DstTy->isIntegerTy(16) || DstTy->isIntegerTy(8);
+  if (SrcTy->isIntegerTy(1) && DstNarrow) {
     emitExtern(B, "SystemConvert.__ToInt32__SystemBoolean__SystemInt32",
                {slotFor(I.getOperand(0))}, slotFor(&I));
     return;
   }
   if ((SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) &&
-      DstTy->isIntegerTy(32)) {
+      DstTy->isIntegerTy(64)) {
+    // Sign-extend in the slot's i32, where the value already is, then convert.
+    unsigned Width = SrcTy->getIntegerBitWidth();
+    int32_t Shift = 32 - static_cast<int32_t>(Width);
+    std::string Masked =
+        memBinop("LogicalAnd", slotFor(I.getOperand(0)),
+                 i32Constant(Width == 8 ? 0xFF : 0xFFFF), "sext64m", B);
+    std::string L =
+        memBinop("LeftShift", Masked, i32Constant(Shift), "sext64l", B);
+    std::string SignExtended =
+        memBinop("RightShift", L, i32Constant(Shift), "sext64r", B);
+    emitExtern(B, "SystemConvert.__ToInt64__SystemInt32__SystemInt64",
+               {SignExtended}, slotFor(&I));
+    return;
+  }
+  if ((SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) && DstNarrow) {
     // A narrow value already lives in a `%SystemInt32` slot; a load sign-extends
     // it, so the zero extension is a mask back to the narrow width.
     unsigned Width = SrcTy->getIntegerBitWidth();
@@ -726,6 +932,18 @@ void UDONWriter::selectZExt(const Instruction &I, UFunction &UF,
                "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32",
                {slotFor(I.getOperand(0)),
                 i32Constant(Width == 8 ? 0xFF : 0xFFFF)},
+               slotFor(&I));
+    return;
+  }
+  if ((SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) &&
+      DstTy->isIntegerTy(64)) {
+    // Clear the high bits of the slot first, then convert: Convert.ToInt64 of a
+    // non-negative i32 is exact, so no masking of the wide value is needed.
+    unsigned Width = SrcTy->getIntegerBitWidth();
+    std::string Masked =
+        memBinop("LogicalAnd", slotFor(I.getOperand(0)),
+                 i32Constant(Width == 8 ? 0xFF : 0xFFFF), "zext64", B);
+    emitExtern(B, "SystemConvert.__ToInt64__SystemInt32__SystemInt64", {Masked},
                slotFor(&I));
     return;
   }
@@ -744,7 +962,10 @@ void UDONWriter::selectZExt(const Instruction &I, UFunction &UF,
                {slotFor(I.getOperand(0))}, slotFor(&I));
     return;
   }
-  reportUDONError("unsupported zext: " + I.getName());
+  reportUDONError("unsupported zext: i" +
+                  Twine(SrcTy->getIntegerBitWidth()) + " to i" +
+                  Twine(DstTy->isIntegerTy() ? DstTy->getIntegerBitWidth() : 0) +
+                  (I.getName().empty() ? Twine("") : " (" + I.getName() + ")"));
 }
 
 void UDONWriter::selectSExt(const Instruction &I, UFunction &UF,
@@ -752,10 +973,14 @@ void UDONWriter::selectSExt(const Instruction &I, UFunction &UF,
   UBlock &B = UF.Blocks[Idx];
   Type *DstTy = I.getType();
   Type *SrcTy = I.getOperand(0)->getType();
+  // As with zext, i8 and i16 live in `%SystemInt32` slots, so extending to
+  // either is extending to i32.
+  bool DstNarrow =
+      DstTy->isIntegerTy(32) || DstTy->isIntegerTy(16) || DstTy->isIntegerTy(8);
   if (SrcTy->isIntegerTy(1)) {
     // `true` sign-extends to -1, not 1: 0 - Convert.ToBoolean(x). Rust emits
     // sext i1 for mask idioms, so the all-ones expectation is load-bearing.
-    if (DstTy->isIntegerTy(32)) {
+    if (DstNarrow) {
       std::string One = freshSlot("sext1", DstTy);
       emitExtern(B, "SystemConvert.__ToInt32__SystemBoolean__SystemInt32",
                  {slotFor(I.getOperand(0))}, One);
@@ -779,8 +1004,7 @@ void UDONWriter::selectSExt(const Instruction &I, UFunction &UF,
                {slotFor(I.getOperand(0))}, slotFor(&I));
     return;
   }
-  if ((SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) &&
-      DstTy->isIntegerTy(32)) {
+  if ((SrcTy->isIntegerTy(8) || SrcTy->isIntegerTy(16)) && DstNarrow) {
     // The load already sign-extends into the `%SystemInt32` slot, so a sext to
     // i32 is the value itself. Masking to the width first is what makes it
     // correct for a value that reached the slot by a narrower route.
@@ -817,13 +1041,21 @@ void UDONWriter::selectBitCast(const Instruction &I, UFunction &UF,
   if (SrcBits == 0 || SrcBits != DstBits)
     reportUDONError("unsupported bitcast: " + I.getName());
 
-  // i32<->f32 and i64<->f64 go through the reserved scratch bytes at offset 0:
-  // a store of the source and a load of the destination type. The
-  // SystemBitConverter reinterpret externs are registered but were never
-  // exercised, so the memory round-trip is the verified path.
-  std::string Scratch = i32Constant(0);
-  emitStore(B, slotFor(I.getOperand(0)), Scratch, SrcTy);
-  emitCopy(B, emitLoad(B, Scratch, DstTy), slotFor(&I));
+  // The reinterpret externs, not a memory round-trip: they were verified to
+  // work (1.5f -> 0x3FC00000 -> 1.5f), and they touch no memory, so a bitcast
+  // no longer depends on the scratch region being valid.
+  const char *Sig = nullptr;
+  if (SrcBits == 32 && SrcTy->isFloatTy() && DstTy->isIntegerTy(32))
+    Sig = "SystemBitConverter.__SingleToInt32Bits__SystemSingle__SystemInt32";
+  else if (SrcBits == 32 && SrcTy->isIntegerTy(32) && DstTy->isFloatTy())
+    Sig = "SystemBitConverter.__Int32BitsToSingle__SystemInt32__SystemSingle";
+  else if (SrcBits == 64 && SrcTy->isDoubleTy() && DstTy->isIntegerTy(64))
+    Sig = "SystemBitConverter.__DoubleToInt64Bits__SystemDouble__SystemInt64";
+  else if (SrcBits == 64 && SrcTy->isIntegerTy(64) && DstTy->isDoubleTy())
+    Sig = "SystemBitConverter.__Int64BitsToDouble__SystemInt64__SystemDouble";
+  if (!Sig)
+    reportUDONError("unsupported bitcast: " + I.getName());
+  emitExtern(B, Sig, {slotFor(I.getOperand(0))}, slotFor(&I));
 }
 
 // --- logical right shift ---------------------------------------------------
@@ -848,7 +1080,15 @@ void UDONWriter::selectLShr(const Instruction &I, UFunction &UF, unsigned &Idx) 
     std::string Shifted = freshSlot("lshr_s", Ty);
     emitExtern(B, binarySignature(Prefix, "RightShift"), {X, slotFor(Count)},
                Shifted);
-    uint64_t SignMask = Bits == 64 ? 0x7FFFFFFFFFFFFFFFull : 0x7FFFFFFFull;
+    // The sign mask must match the *type* width, not the slot width: i8/i16
+    // live in `%SystemInt32` slots (sign-extended), so a 32-bit mask would
+    // leave the high sign copies in place and produce a garbage index. For
+    // `i16` a mask of `0x7FFF >> (n-1)` equals `0xFFFF >> n`, which is exactly
+    // the logical-shift result for the value's own width.
+    uint64_t SignMask = Bits >= 64   ? 0x7FFFFFFFFFFFFFFFull
+                        : Bits == 32 ? 0x7FFFFFFFull
+                        : Bits == 16 ? 0x7FFFull
+                                     : 0x7Full;
     uint64_t MaskBits = N >= Bits ? 0 : (SignMask >> (N - 1));
     emitExtern(B, binarySignature(Prefix, "LogicalAnd"),
                {Shifted, constantSlot(ConstantInt::get(Ty, MaskBits))},
@@ -860,8 +1100,11 @@ void UDONWriter::selectLShr(const Instruction &I, UFunction &UF, unsigned &Idx) 
   std::string Shifted = freshSlot("lshr_s", Ty);
   emitExtern(B, binarySignature(Prefix, "RightShift"), {X, slotFor(Count)},
              Shifted);
-  std::string SignMask = constantSlot(
-      ConstantInt::get(Ty, Bits == 64 ? 0x7FFFFFFFFFFFFFFFull : 0x7FFFFFFFull));
+  uint64_t SignMaskBits = Bits >= 64   ? 0x7FFFFFFFFFFFFFFFull
+                            : Bits == 32 ? 0x7FFFFFFFull
+                            : Bits == 16 ? 0x7FFFull
+                                         : 0x7Full;
+  std::string SignMask = constantSlot(ConstantInt::get(Ty, SignMaskBits));
   std::string NM1 = freshSlot("lshr_nm1", Ty);
   emitExtern(B, binarySignature(Prefix, "Subtraction"),
              {slotFor(Count), constantSlot(ConstantInt::get(Ty, 1))}, NM1);

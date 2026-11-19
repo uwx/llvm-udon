@@ -25,6 +25,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -101,7 +102,13 @@ std::string UDONWriter::entryName(const Function &F) const {
 }
 
 std::string UDONWriter::blockLabel(const BasicBlock *BB) const {
-  return mangle(BB->getParent()->getName()) + "_" + mangle(BB->getName());
+  // The block's POSITION, not its name: an unnamed block would produce
+  // `<fn>_` by name alone, which collides with the `<fn>__` that an edge
+  // trampoline builds as `blockLabel(Pred) + "_to_" + blockLabel(Succ)`, and
+  // with `<fn>_` from any other unnamed block. clang names almost nothing, so
+  // this is the common case, not an edge case.
+  return mangle(BB->getParent()->getName()) + "_bb" +
+         std::to_string(BlockNumbers.lookup(BB));
 }
 
 std::string UDONWriter::returnSlot(const Function *F) const {
@@ -195,6 +202,9 @@ std::string UDONWriter::i32Constant(int32_t V) {
   else
     DataLines.push_back("    " + Name + ": %SystemInt32, " + std::to_string(V));
   ConstantSlots[Key] = Name;
+  // Record the value so a memory access at this offset can fold its own `>> 2`
+  // and `& 3` instead of emitting shift externs for them.
+  SlotConstants[Name] = std::to_string(static_cast<uint32_t>(V));
   return Name;
 }
 
@@ -266,8 +276,12 @@ std::string UDONWriter::constantSlot(const Constant *C) {
       ConstantSlots[Key] = Name;
       return Name;
     }
+    std::string Text;
+    raw_string_ostream OS(Text);
+    C->print(OS);
     reportUDONError("integer constant of width " + std::to_string(Bits) +
-                    " has no Udon type");
+                    " in " + (Cur ? Cur->F->getName().str() : "<none>") +
+                    " has no Udon type: " + OS.str());
   }
 
   if (auto *CF = dyn_cast<ConstantFP>(C)) {
@@ -313,6 +327,11 @@ std::string UDONWriter::constantSlot(const Constant *C) {
   }
 
   if (auto *G = dyn_cast<GlobalVariable>(C)) {
+    // A promoted global has no byte address at all; reaching here means the
+    // escape analysis missed a use, which would silently hand out a wrong
+    // address. Fail loudly instead.
+    if (!promotedSlot(*G).empty())
+      reportUDONError("address of a promoted global was taken: " + G->getName());
     // A global's address is a `__mem` byte offset, which is known before
     // selection, so it is an ordinary `SystemInt32` literal slot.
     auto It = GlobalOffsets.find(G);
@@ -327,6 +346,11 @@ std::string UDONWriter::constantSlot(const Constant *C) {
     DataLines.push_back("    " + Name + ": %SystemInt32, " +
                         std::to_string(It->second));
     ConstantSlots[Key] = Name;
+    // The slot holds a literal byte offset, so a memory access through it can
+    // fold its own `>> 2` and `& 3` into literal slots instead of emitting a
+    // shift extern per access. Without this, the most-called extern in libsm64
+    // was the word-index shift, at 22% of all calls.
+    SlotConstants[Name] = std::to_string(static_cast<uint32_t>(It->second));
     return Name;
   }
 
@@ -337,6 +361,28 @@ std::string UDONWriter::constantSlot(const Constant *C) {
     if (It == FunctionPointerIndices.end())
       reportUDONError("function has no table index: " + Fn->getName());
     return i32Constant(static_cast<int32_t>(It->second));
+  }
+
+  // A constant address: a folded `getelementptr`, a `ptrtoint` of one, or a
+  // cast that preserves the address. C folds `&buf[10]` and `(char *)&x + 4`
+  // into exactly this, so without it every such expression is rejected.
+  //
+  // The value is a `__mem` byte offset, which is a plain integer, so it becomes
+  // an ordinary literal slot -- no runtime arithmetic and no extra instruction.
+  if (Ty->isPointerTy() || Ty->isIntegerTy(32)) {
+    int64_t Addr = 0;
+    if (constantAddress(C, Addr)) {
+      std::string Key = "caddr:" + std::to_string(Addr);
+      auto It = ConstantSlots.find(Key);
+      if (It != ConstantSlots.end())
+        return It->second;
+      std::string Name = "__caddr_" + std::to_string(ConstantSlots.size());
+      declareSlot(Name, "SystemInt32");
+      DataLines.push_back("    " + Name + ": %SystemInt32, " +
+                          std::to_string(Addr));
+      ConstantSlots[Key] = Name;
+      return Name;
+    }
   }
 
   if (isa<UndefValue>(C) || isa<PoisonValue>(C)) {
@@ -351,8 +397,101 @@ std::string UDONWriter::constantSlot(const Constant *C) {
     return Name;
   }
 
+  // Print the constant, not its name: most constants are unnamed, so a name
+  // yields an empty string and says nothing about what was rejected.
+  std::string Text;
+  raw_string_ostream OS(Text);
+  C->print(OS);
   reportUDONError("unsupported constant in " + Cur->F->getName() + ": " +
-                  C->getName());
+                  OS.str());
+}
+
+bool UDONWriter::constantAddress(const Constant *C, int64_t &Out) const {
+  if (auto *G = dyn_cast<GlobalVariable>(C)) {
+    auto It = GlobalOffsets.find(G);
+    if (It == GlobalOffsets.end())
+      return false;
+    Out = static_cast<int64_t>(It->second);
+    return true;
+  }
+
+  // A null pointer is byte offset 0: bytes 0-15 of `__mem` are reserved, so no
+  // real object lives there.
+  if (isa<ConstantPointerNull>(C)) {
+    Out = 0;
+    return true;
+  }
+
+  // The result of a `ptrtoint` is the address itself.
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    Out = CI->getSExtValue();
+    return true;
+  }
+
+  auto *CE = dyn_cast<ConstantExpr>(C);
+  if (!CE)
+    return false;
+
+  switch (CE->getOpcode()) {
+  case Instruction::GetElementPtr: {
+    int64_t Base = 0;
+    if (!constantAddress(CE->getOperand(0), Base))
+      return false;
+    auto *GEP = cast<GEPOperator>(CE);
+    APInt Offset(Mod->getDataLayout().getIndexTypeSizeInBits(GEP->getType()),
+                 0);
+    if (!GEP->accumulateConstantOffset(Mod->getDataLayout(), Offset))
+      return false;
+    Out = Base + Offset.getSExtValue();
+    return true;
+  }
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
+    return constantAddress(CE->getOperand(0), Out);
+  case Instruction::IntToPtr:
+  case Instruction::PtrToInt:
+    // `ptrtoint` yields the address itself; `inttoptr` of a constant is that
+    // address. Both denote the same `__mem` byte offset.
+    return constantAddress(CE->getOperand(0), Out);
+
+  // Arithmetic on constants. C folds `(int)&gAudioHeap + 15` -- and the `& -16`
+  // that usually follows it -- into a constant expression, which is just as
+  // constant as the plain GEP above. Evaluating it here keeps every such
+  // expression a literal slot instead of a rejected instruction.
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr: {
+    int64_t A = 0, B = 0;
+    if (!constantAddress(CE->getOperand(0), A) ||
+        !constantAddress(CE->getOperand(1), B))
+      return false;
+    // Addresses are i32, so the fold is wrapping 32-bit arithmetic. Any wider
+    // width would disagree with the address this eventually denotes.
+    uint32_t UA = static_cast<uint32_t>(A), UB = static_cast<uint32_t>(B);
+    uint32_t R;
+    switch (CE->getOpcode()) {
+    case Instruction::Add: R = UA + UB; break;
+    case Instruction::Sub: R = UA - UB; break;
+    case Instruction::Mul: R = UA * UB; break;
+    case Instruction::And: R = UA & UB; break;
+    case Instruction::Or: R = UA | UB; break;
+    case Instruction::Xor: R = UA ^ UB; break;
+    case Instruction::Shl: R = UA << (UB & 31); break;
+    case Instruction::LShr: R = UA >> (UB & 31); break;
+    default: R = static_cast<uint32_t>(static_cast<int32_t>(UA) >> (UB & 31)); break;
+    }
+    Out = static_cast<int64_t>(static_cast<int32_t>(R));
+    return true;
+  }
+  default:
+    return false;
+  }
 }
 
 std::string UDONWriter::slotFor(const Value *V) {
@@ -367,8 +506,21 @@ std::string UDONWriter::slotFor(const Value *V) {
     reportUDONError("value of void type has no slot");
 
   std::string Ty = udonTypeOf(V->getType());
-  if (Ty.empty())
+  if (Ty.empty()) {
+    // An aggregate: return its PREFIX without declaring a slot. Fields are
+    // declared on demand by `aggFieldSlot`; emitting the prefix itself would
+    // create an aggregate slot with no Udon type. The prefix is bookkeeping
+    // only; the fields are the real slots.
+    if (isa<StructType>(V->getType()) || isa<ArrayType>(V->getType())) {
+      std::string Prefix =
+          V->hasName()
+              ? mangle(Cur->F->getName()) + "_" + mangle(V->getName())
+              : freshSlot("agg", V->getType());
+      Slots[V] = Prefix;
+      return Prefix;
+    }
     reportUDONError("value has no Udon type in " + Cur->F->getName());
+  }
 
   // An unnamed value gets a temporary slot, and that slot is registered here:
   // `freshSlot` only allocates a name, so a second lookup would otherwise
@@ -383,6 +535,31 @@ std::string UDONWriter::slotFor(const Value *V) {
     NullSlots.push_back({Name, Ty});
   Slots[V] = Name;
   return Name;
+}
+
+bool UDONWriter::isScalarUdonType(Type *Ty) const {
+  if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+      Ty->isIntegerTy(32) || Ty->isIntegerTy(64) || Ty->isFloatTy() ||
+      Ty->isDoubleTy() || Ty->isPointerTy())
+    return true;
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty))
+    return !udonTypeOf(VT).empty();
+  return false;
+}
+
+std::string UDONWriter::aggFieldSlot(const Value *Agg, unsigned Index,
+                                     Type *FieldTy) {
+  std::string Prefix = slotFor(Agg);
+  std::string Field = Prefix + "_f" + std::to_string(Index);
+  std::string Ty = udonTypeOf(FieldTy);
+  if (Ty.empty())
+    reportUDONError("aggregate field has no Udon type in " +
+                    Cur->F->getName());
+  if (!SlotTypes.count(Field)) {
+    declareSlot(Field, Ty);
+    NullSlots.push_back({Field, Ty});
+  }
+  return Field;
 }
 
 // --- emission primitives ---------------------------------------------------
@@ -464,7 +641,8 @@ bool UDONWriter::runOnModule(Module &M) {
     for (const char *Name : {"__udon_ctlz_i32", "__udon_ctlz_i64",
                              "__udon_cttz_i32", "__udon_cttz_i64",
                              "__udon_ctpop_i32", "__udon_ctpop_i64",
-                             "__udon_memset_fill"}) {
+                             "__udon_bitreverse_i32", "__udon_bitreverse_i64",
+                             "__udon_memset_fill", "__udon_memcpy_fill"}) {
       if (Function *Existing = Runtime->getFunction(Name)) {
         if (Existing->isDeclaration())
           continue;
@@ -500,10 +678,45 @@ bool UDONWriter::runOnModule(Module &M) {
 
   declareProgramSlots();
   buildCallGraph();
-  layOutGlobals();
-  layOutFrames();
+  // Before layOutGlobals: a global initializer may hold a function pointer, and
+  // its value in the data image is that function's table index.
   collectFunctionPointers();
+  // Non-address-taken scalar globals become typed heap slots; the rest stay in
+  // `__mem`. Must run before layout so promoted globals claim no memory bytes.
+  classifyGlobals();
+  layOutGlobals();
 
+  // `udon_export_<name>` globals are the ABI between this program and its
+  // Unity host: the writer emits a `%SystemInt32` slot holding the global's
+  // byte offset and exports it, so the host reads and writes the C value
+  // through `__mem` at the exported offset. The C name keeps its
+  // `udon_export_` prefix inside the program; the exported slot drops it, so
+  // `udon_export_ud_input` becomes the program variable `ud_input`. `__mem`
+  // itself can be exported too, which is the single handle a host reads and
+  // writes the whole memory through.
+  if (Opts.ExportMemory)
+    DataExports.push_back("__mem");
+  for (GlobalVariable &G : Mod->globals()) {
+    if (G.isDeclaration() || !G.getName().starts_with("udon_export_"))
+      continue;
+    StringRef Off = G.getName().drop_front(StringRef("udon_export_").size());
+    if (Off.empty())
+      reportUDONError("exported global with an empty name: " + G.getName());
+    auto It = GlobalOffsets.find(&G);
+    if (It == GlobalOffsets.end())
+      reportUDONError("exported global has no offset: " + G.getName());
+    std::string Slot = "__bridge_" + mangle(Off);
+    addressSlot(Slot, It->second);
+    DataExports.push_back(Slot);
+  }
+  layOutFrames();
+
+  // Number every block in every function before anything else looks one up.
+  // `blockLabel` is positional, and selection asks for a label for blocks it
+  // has not reached yet (an edge trampoline names its successor).
+  for (const Function &F : M)
+    for (const BasicBlock &BB : F)
+      BlockNumbers[&BB] = BlockNumbers.size();
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -536,12 +749,20 @@ bool UDONWriter::runOnModule(Module &M) {
   // declaration list, so its size is the capacity -- but a slot declared and
   // then never emitted still consumes an address, so the count must come from
   // what was actually written into `.data_start`, not from the map's size.
-  uint64_t Declared = 0;
-  {
-    // Every emitted `name: %Type, value` line is one heap slot.
-    Declared = DataLines.size() + NullSlots.size();
-  }
-  SlotCount = Declared;
+  //
+  // Plus one slot per DISTINCT extern signature: the assembler interns each
+  // signature string into the heap (`CreateAnonymousStringVariable`) as it
+  // assembles `EXTERN`, so a program with 33 distinct externs needs 33 more
+  // slots than its `.data_start` accounts for. Without this the heap is
+  // exactly full and the first interned string throws.
+  uint64_t Declared = DataSlotCount;
+  StringSet<> Signatures;
+  for (const UFunction &UF : Functions)
+    for (const UBlock &B : UF.Blocks)
+      for (const UInst &I : B.Insts)
+        if (I.Op == UInst::EXTERN)
+          Signatures.insert(I.Operand);
+  SlotCount = Declared + Signatures.size();
   return true;
 }
 
@@ -563,10 +784,31 @@ void UDONWriter::layout() {
 
 void UDONWriter::writeDataBlock() {
   out() << ".data_start\n";
-  for (const std::string &Line : DataLines)
+  // `.export` precedes the declarations it names. A data export makes the slot
+  // a program variable, which is how the Unity host reads and writes globals
+  // and, with `-udon-export-memory`, the whole memory image.
+  for (const std::string &Export : DataExports)
+    out() << "    .export " << Export << "\n";
+  // A slot can be declared twice. `declareSlot` is idempotent, but the null
+  // line beside it is not, and a call inside an earlier function declares the
+  // callee's argument slots before the callee is selected -- so the callee's own
+  // declaration repeats them. The assembler rejects a duplicate data variable,
+  // so a name is written once and the count is taken from what was written.
+  StringSet<> Emitted;
+  auto Emit = [&](StringRef Line, StringRef Name) {
+    if (Name.empty() || !Emitted.insert(Name).second)
+      return;
     out() << Line << "\n";
-  for (const auto &[Name, Type] : NullSlots)
-    out() << "    " << Name << ": %" << Type << ", null\n";
+  };
+  for (const std::string &Line : DataLines) {
+    StringRef Text(Line);
+    Emit(Text, Text.substr(0, Text.find(':')).trim());
+  }
+  for (const auto &[Name, Type] : NullSlots) {
+    std::string Line = "    " + Name + ": %" + Type + ", null";
+    Emit(Line, Name);
+  }
+  DataSlotCount = Emitted.size();
   out() << ".data_end\n";
 }
 
@@ -596,29 +838,58 @@ void UDONWriter::writeCodeBlock() {
 }
 
 void UDONWriter::emitDataImage() {
+  // The image is a WORD array, matching `__mem`, so init copies it with one
+  // `__CopyTo__` instead of an unrolled per-word store (which would cost a heap
+  // slot per word -- 65,536 of them for a 1 MiB image).
+  //
+  // Packing little-endian here is the same convention every load and store
+  // uses; the writer knows the bytes at compile time, so no runtime conversion
+  // is needed.
   // The globals image travels in the heap image as base64, because the
   // assembler cannot express a byte array literal and the importer must not
   // serialize a 1 MiB array per behaviour.
   // Even an all-zero image is emitted: `__udon_init` copies it with
   // `__CopyTo__`, which throws on a null array, so a program with no
   // initializer bytes still needs a real (empty) array here.
+  // Pack the bytes into words, little-endian, padding the last word with zeros.
+  // The image occupies whole words in `__mem`, so a trailing partial word is
+  // covered by the zeros.
+  std::vector<uint32_t> Words;
+  Words.reserve((DataImage.size() + 3) / 4);
+  for (size_t I = 0; I < DataImage.size(); I += 4) {
+    uint32_t W = 0;
+    for (size_t J = 0; J < 4 && I + J < DataImage.size(); J++)
+      W |= static_cast<uint32_t>(DataImage[I + J]) << (8 * J);
+    Words.push_back(W);
+  }
+  DataImageWords = Words;
+
   static const char *Digits =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   std::string Encoded;
-  Encoded.reserve(((DataImage.size() + 2) / 3) * 4);
-  for (size_t I = 0; I < DataImage.size(); I += 3) {
-    uint32_t B0 = DataImage[I];
-    uint32_t B1 = I + 1 < DataImage.size() ? DataImage[I + 1] : 0;
-    uint32_t B2 = I + 2 < DataImage.size() ? DataImage[I + 2] : 0;
+  Encoded.reserve(((Words.size() * 4 + 2) / 3) * 4);
+  auto Push = [&](uint8_t B) { Encoded.push_back(static_cast<char>(B)); };
+  (void)Push;
+  for (size_t I = 0; I < Words.size(); I += 1) {
+    for (size_t J = 0; J < 4; J++)
+      Encoded.push_back(static_cast<char>((Words[I] >> (8 * J)) & 0xFF));
+  }
+  // Base64 over the packed word bytes.
+  std::string B64;
+  B64.reserve(((Encoded.size() + 2) / 3) * 4);
+  for (size_t I = 0; I < Encoded.size(); I += 3) {
+    uint32_t B0 = static_cast<uint8_t>(Encoded[I]);
+    uint32_t B1 = I + 1 < Encoded.size() ? static_cast<uint8_t>(Encoded[I + 1]) : 0;
+    uint32_t B2 = I + 2 < Encoded.size() ? static_cast<uint8_t>(Encoded[I + 2]) : 0;
     uint32_t Triple = (B0 << 16) | (B1 << 8) | B2;
-    Encoded.push_back(Digits[(Triple >> 18) & 0x3F]);
-    Encoded.push_back(Digits[(Triple >> 12) & 0x3F]);
-    Encoded.push_back(I + 1 < DataImage.size() ? Digits[(Triple >> 6) & 0x3F] : '=');
-    Encoded.push_back(I + 2 < DataImage.size() ? Digits[Triple & 0x3F] : '=');
+    B64.push_back(Digits[(Triple >> 18) & 0x3F]);
+    B64.push_back(Digits[(Triple >> 12) & 0x3F]);
+    B64.push_back(I + 1 < Encoded.size() ? Digits[(Triple >> 6) & 0x3F] : '=');
+    B64.push_back(I + 2 < Encoded.size() ? Digits[Triple & 0x3F] : '=');
   }
   HeapEntries.push_back(
-      std::string("\"__data_image\": {\"type\": \"SystemByteArray\", ") +
-      "\"value\": {\"bytes\": \"" + Encoded + "\"}}");
+      std::string("\"__data_image\": {\"type\": \"SystemInt32Array\", ") +
+      "\"value\": {\"bytes\": \"" + B64 + "\", \"wordArray\": true}}");
 }
 
 void UDONWriter::emitHaltBlock() {

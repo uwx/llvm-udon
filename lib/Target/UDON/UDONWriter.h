@@ -54,7 +54,11 @@ class Value;
 struct UDONOptions {
   /// End of the globals image: the byte offset where the shadow stack begins.
   uint64_t MemoryBytes = 1u << 20;
-  /// Bytes of alloca shadow stack above the globals image.
+  /// Bytes of the `malloc` heap, between the globals image and the shadow
+  /// stack. Zero means no heap: a program that never calls `malloc` pays
+  /// nothing.
+  uint64_t HeapBytes = 0;
+  /// Bytes of alloca shadow stack above the heap.
   uint64_t ShadowStackBytes = 1u << 16;
   /// Entries per `__stack_*` caller-save array.
   uint64_t StackDepth = 1024;
@@ -64,6 +68,9 @@ struct UDONOptions {
   bool LinkRuntime = true;
   /// Export every internal label with a `__` prefix, for the lit suite.
   bool ExportLabels = false;
+  /// Export `__mem` itself as a program variable so a host can read and write
+  /// the memory through a named slot instead of importing offsets.
+  bool ExportMemory = false;
   /// Path of the used-extern manifest, empty for none.
   std::string ManifestPath;
   /// Path of the runtime IR to link, empty for none.
@@ -140,9 +147,12 @@ struct UFunction {
   std::deque<UBlock> Blocks;
   /// Basic block -> index in `Blocks`.
   DenseMap<const BasicBlock *, unsigned> BlockIndex;
-  /// Successor edge -> index of its trampoline block, for a predecessor with
-  /// more than one successor whose phi copies must run only on that edge.
-  DenseMap<const BasicBlock *, unsigned> EdgeIndex;
+  /// Trampoline block per (predecessor, successor) edge. Keyed by the PAIR, not
+  /// by the successor: a loop header has two predecessors, and sharing one
+  /// trampoline between them would run the preheader's phi copies on the back
+  /// edge -- zeroing the induction variable so the loop never advances.
+  DenseMap<std::pair<const BasicBlock *, const BasicBlock *>, unsigned>
+      EdgeIndex;
   uint32_t Address = 0;
 };
 
@@ -171,7 +181,15 @@ public:
   const DataLayout *DL = nullptr;
   UDONOptions Opts;
 
-  std::vector<UFunction> Functions;
+  /// A deque, not a vector: `Cur` points into this container while the next
+  /// function is being selected, and a vector's growth would invalidate it --
+  /// every later write would land in freed memory.
+  std::deque<UFunction> Functions;
+
+  /// Position of each basic block within the module. Labels are built from this
+  /// rather than from the block's name: clang names almost nothing, so a
+  /// name-based label collapses to `<fn>_` for every unnamed block.
+  DenseMap<const BasicBlock *, unsigned> BlockNumbers;
 
   /// `.data_start` literal slots whose value is known at selection time.
   std::vector<std::string> DataLines;
@@ -189,6 +207,9 @@ public:
   /// Export name -> label.
   std::vector<std::pair<std::string, std::string>> CodeExports;
 
+  /// Data symbols to `.export` in `.data_start`, in declaration order.
+  std::vector<std::string> DataExports;
+
   /// Every extern signature emitted, for the manifest.
   StringSet<> UsedExterns;
 
@@ -198,6 +219,18 @@ public:
   /// Constants already interned, keyed by `type:bits`.
   StringMap<std::string> ConstantSlots;
 
+  /// Slot -> the decimal value it holds, for `SystemInt32` constant slots.
+  /// Populated by `i32Constant`, read by `constantByteOffset`: an access at a
+  /// constant offset folds its `>> 2` into a literal index slot instead of
+  /// emitting a shift extern.
+  StringMap<std::string> SlotConstants;
+
+  /// Slots that already hold a SIGN-EXTENDED narrow value: the result of an
+  /// `i8`/`i16` load, which `emitLoad` widens with `<< 24 >> 24`. A `sitofp`
+  /// of such a value needs no second widening -- the shifts are the only
+  /// reason it pays two externs per byte, and this is 55% of a tick.
+  StringSet<> SignExtendedSlots;
+
   /// Label -> address, filled by layout().
   StringMap<uint32_t> LabelAddresses;
 
@@ -206,6 +239,10 @@ public:
 
   /// `__data_image` contents, indexed by `__mem` offset.
   std::vector<uint8_t> DataImage;
+
+  /// The same image packed into little-endian words, which is what the heap
+  /// image actually carries.
+  std::vector<uint32_t> DataImageWords;
 
   /// Function -> its shadow-stack frame size.
   DenseMap<const Function *, uint32_t> FrameSizes;
@@ -252,12 +289,10 @@ public:
   DenseMap<const Value *, std::string> Slots;
   /// Per-function temporary counter, so names are stable across runs.
   unsigned TempCounter = 0;
-  /// Program-wide counter for split-block names. Program-wide, not per
-  /// function: a split's label is used as a jump target as well as a label, so
-  /// it must be unique by construction rather than deduplicated afterwards.
-  unsigned BlockCounter = 0;
-  /// The current function's store scratch slot, empty until first needed.
-  std::string ScratchBytes;
+  /// Program-wide counter for split-block labels. A split's label is used as a
+  /// jump target as well as a label, so it must be unique by construction
+  /// rather than deduplicated afterwards.
+  unsigned LabelCounter = 0;
 
 
   // --- slot and constant machinery ----------------------------------------
@@ -267,6 +302,14 @@ public:
 
   /// The slot name for a value, allocating one on first use.
   std::string slotFor(const Value *V);
+
+  /// The slot naming an AGGREGATE value's field. Aggregates are lowered by
+  /// scalarisation: `{ i32, float }` becomes one `%SystemInt32` and one
+  /// `%SystemSingle` slot, named `<agg>_<index>`. `slotFor` on an aggregate
+  /// returns the prefix, which is never emitted; only fields are real slots.
+  std::string aggFieldSlot(const Value *Agg, unsigned Index, Type *FieldTy);
+  /// True when the type is a scalar the writer can name; an aggregate is not.
+  bool isScalarUdonType(Type *Ty) const;
 
   /// A fresh temporary slot of the given type, named after `Hint`.
   std::string freshSlot(StringRef Hint, Type *Ty);
@@ -278,6 +321,18 @@ public:
 
   /// The slot holding a constant, creating the literal or heap entry it needs.
   std::string constantSlot(const Constant *C);
+
+  /// If `C` denotes an address whose `__mem` byte offset is known at compile
+  /// time, set `Out` and return true. Covers a global, null, a constant
+  /// `getelementptr` chain, and the casts that preserve an address.
+  bool constantAddress(const Constant *C, int64_t &Out) const;
+
+  /// If `C` denotes a function, through any casts, set `Out` to its
+  /// `__fn_table` index.
+  bool constantFunctionIndex(const Constant *C, uint64_t &Out) const;
+
+  /// Serialize `C` into `__data_image` at `Offset`, a `__mem` byte offset.
+  void writeConstantBytes(const Constant *C, uint32_t Offset);
 
   /// A `SystemUInt32` literal slot holding `Address`.
   std::string addressSlot(StringRef Name, uint32_t Address);
@@ -313,15 +368,66 @@ public:
   /// `__mem` offset of a pointer value, as a slot name.
   std::string pointerOffset(const Value *V, UBlock &B);
 
-  /// Load `Ty` from `__mem` at `Offset`, returning the value's slot.
-  std::string emitLoad(UBlock &B, const std::string &Offset, Type *Ty);
+  /// Load `Ty` from `__mem` at `Offset`, returning the value's slot. Takes the
+  /// block index because a word-array read may split the block.
+  ///
+  /// `Align` is the IR's own `align` for this access. When it is at least the
+  /// access width, the address is provably word-aligned and the whole
+  /// alignment diamond collapses to one array read -- the writer honours
+  /// `align` for globals (`layOutGlobals`) and allocas (`layOutFrames`), so
+  /// the attribute is trustworthy. `Align == 0` means "unknown" and takes the
+  /// general path.
+  std::string emitLoad(unsigned &Idx, const std::string &Offset, Type *Ty,
+                       unsigned Align = 0);
 
-  /// Store `Value` into `__mem` at `Offset`.
-  void emitStore(UBlock &B, const std::string &Value,
-                 const std::string &Offset, Type *Ty);
+  /// Store `Value` into `__mem` at `Offset`. `Align` as for `emitLoad`.
+  void emitStore(unsigned &Idx, const std::string &Value,
+                 const std::string &Offset, Type *Ty, unsigned Align = 0);
 
-  /// The per-function `%SystemByteArray` scratch slot a store writes through.
-  std::string scratchByteArray();
+  // --- word-array access ---------------------------------------------------
+  //
+  // `__mem` is a `%SystemInt32Array` but addresses are byte offsets, so each
+  // access converts: word index is `p >> 2`, bit offset is `(p & 3) * 8`.
+
+  std::string memWordIndex(const std::string &ByteOffset, UBlock &B);
+  std::string memBitOffset(const std::string &ByteOffset, UBlock &B);
+  std::string memGetWord(const std::string &WordIndex, UBlock &B);
+  void memSetWord(const std::string &WordIndex, const std::string &Value,
+                  UBlock &B);
+  /// The constant `ByteOffset` denotes, or an empty string when it is not a
+  /// compile-time constant. Lets an access fold `>> 2` into a literal index
+  /// slot instead of paying an `EXTERN` for it.
+  std::string constantByteOffset(const std::string &Offset);
+  std::string memBinop(StringRef Op, const std::string &A,
+                       const std::string &Bv, StringRef Hint, UBlock &B);
+  /// A 32-bit read at a possibly-unaligned byte offset. Takes the block INDEX
+  /// and updates it, because the split moves the continuation: a `UBlock&`
+  /// cannot be rebound for the caller.
+  ///
+  /// `ProvablyAligned` skips the alignment diamond entirely: the word IS the
+  /// value. Set from the IR's own `align` attribute, which the writer honours
+  /// for both globals and allocas.
+  std::string memReadUnaligned(const std::string &ByteOffset, unsigned &Idx,
+                               bool ProvablyAligned = false);
+  /// A 32-bit write at a possibly-unaligned byte offset. Same reason.
+  void memWriteUnaligned(const std::string &ByteOffset,
+                         const std::string &Value, unsigned &Idx,
+                         bool ProvablyAligned = false);
+
+  // --- scalar global promotion --------------------------------------------
+  //
+  // A scalar global whose address is never taken has no reason to live in
+  // `__mem`: it can be a typed heap slot, which turns every load into a
+  // reference and every store into a COPY. Measured on libsm64: 140 of 1081
+  // globals qualify, covering 1388 load/store sites.
+  //
+  /// The promoted globals, mapped to the slot that holds them.
+  DenseMap<const GlobalVariable *, std::string> PromotedSlots;
+  /// Classifies every defined global: eligible or must stay in memory.
+  void classifyGlobals();
+  /// The typed slot a promoted global lives in, or "" if it is not promoted.
+  std::string promotedSlot(const GlobalVariable &G);
+
 
   /// The condition as a `SystemBoolean` slot.
   std::string boolSlotFor(const Value *V, UBlock &B);
@@ -357,6 +463,11 @@ public:
   /// `__mem`'s byte size, including the shadow stack and the pad bytes.
   uint64_t MemorySizeBytes = 0;
 
+  /// `__mem`'s word count, which is the array's element count.
+  uint64_t MemoryWordCount = 0;
+  /// Data slots actually written to `.data_start`, duplicates removed.
+  uint64_t DataSlotCount = 0;
+
   // --- selection ----------------------------------------------------------
 
   void selectFunction(const Function &F);
@@ -374,6 +485,12 @@ public:
   /// Append an empty block to `UF` and return its index. Used for every split,
   /// so a block's address is always its first instruction's.
   unsigned appendBlock(UFunction &UF, const std::string &Label);
+
+  /// A fresh, program-unique label stem: `<fn>_<hint>_<n>`. Every split names
+  /// its blocks from this, so two splits can never collide -- which a bare
+  /// counter concatenated three times in one expression could, because the
+  /// three `++` evaluations are not ordered against each other.
+  std::string freshLabelStem(StringRef Hint);
 
   /// A two-arm diamond: `Cond` chooses between two copies into `Result`, and
   /// the returned index is the join block, which the caller continues filling.

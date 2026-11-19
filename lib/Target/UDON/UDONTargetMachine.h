@@ -63,6 +63,10 @@ private:
   mutable UDONObjectFile TLOF;
 };
 
+/// Splits `llvm.*.with.overflow` into the value and the flag, because the
+/// writer has no aggregate slot type.
+FunctionPass *createUDONLowerOverflowPass();
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_UDON_UDONTARGETMACHINE_H

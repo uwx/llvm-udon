@@ -4,11 +4,17 @@
 ; its own function -- putting it in `main` would make every invocation request
 ; it, and the first one would halt too.
 ;
+; Each frame's address escapes through a volatile store, because the writer's
+; pipeline runs SROA after inlining: without an escape, SROA promotes the
+; array away and the frame stops existing, which is the opposite of what this
+; fixture is testing.
+;
 ; RUN: llvm-udon %s -o %t.uasm -udon-shadow-stack-bytes=16384
 ; RUN: udon-vm run %t.uasm --heap-json %t.udonheap.json --repeat 3 --entry _start | FileCheck --check-prefix=OUT %s
 ; RUN: udon-vm run %t.uasm --heap-json %t.udonheap.json --entry recover_nested | FileCheck --check-prefix=NESTED %s
 
 @g_count = internal global i32 0, align 4
+@escape = internal global ptr null, align 4
 
 ; 12 KiB: fits a fresh 16 KiB region, and leaves only 4 KiB.
 define internal i32 @big_ok(i32 %seed) {
@@ -18,6 +24,7 @@ entry:
   %b = trunc i32 %seed to i8
   store i8 %b, ptr %kp, align 1
   %kv = load i8, ptr %kp, align 1
+  store volatile ptr %kp, ptr @escape, align 4
   %kvi = zext i8 %kv to i32
   ret i32 %kvi
 }
@@ -28,6 +35,7 @@ entry:
   %big = alloca [20000 x i8], align 4
   %bp = getelementptr inbounds [20000 x i8], ptr %big, i32 0, i32 0
   store i8 1, ptr %bp, align 1
+  store volatile ptr %bp, ptr @escape, align 4
   ret i32 -1
 }
 

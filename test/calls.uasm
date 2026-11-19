@@ -1,0 +1,3052 @@
+.data_start
+    __sp: %SystemInt32, 1114112
+    __depth: %SystemInt32, 0
+    __halt_reason: %SystemInt32, 0
+    __haltaddr: %SystemUInt32, 0xFFFFFFFF
+    __inited: %SystemBoolean, null
+    __sptr_i32: %SystemInt32, 0
+    __sptr_i64: %SystemInt32, 0
+    __sptr_f32: %SystemInt32, 0
+    __sptr_f64: %SystemInt32, 0
+    __sptr_obj: %SystemInt32, 0
+    __const_i32_0: %SystemInt32, 1
+    __const_i32_1: %SystemInt32, 1024
+    __const_i32_2: %SystemInt32, 4
+    __const_i32_3: %SystemInt32, 5
+    __const_i32_4: %SystemInt32, 0
+    __const_i32_5: %SystemInt32, 1114112
+    __const_i32_6: %SystemInt32, 278530
+    __const_i32_8: %SystemInt32, 2147483647
+    __const_i32_9: %SystemInt32, 1431655765
+    __const_i32_10: %SystemInt32, 858993459
+    __const_i32_11: %SystemInt32, 2
+    __const_i32_12: %SystemInt32, 1073741823
+    __const_i32_13: %SystemInt32, 268435455
+    __const_i32_14: %SystemInt32, 252645135
+    __const_i32_15: %SystemInt32, 16843009
+    __const_i32_16: %SystemInt32, 24
+    __const_i32_17: %SystemInt32, 255
+    __const_i32_21: %SystemInt32, 32
+    __const_i32_22: %SystemInt32, 8
+    __const_i32_23: %SystemInt32, 16777215
+    __const_i32_24: %SystemInt32, 16
+    __const_i32_25: %SystemInt32, 65535
+    __const_i32_26: %SystemInt32, 3
+    __const_i32_27: %SystemInt32, -1
+    __const_i32_28: %SystemInt32, -256
+    __const_i32_29: %SystemInt32, 0x80000000
+    __const_i32_30: %SystemInt32, 16711935
+    __addr_twice_ret_0: %SystemUInt32, 0x000000C4
+    __addr_factorial_ret_4: %SystemUInt32, 0x000002F0
+    __addr_udon_event_start_ret_0: %SystemUInt32, 0x00000404
+    __addr_udon_event_start_ret_6: %SystemUInt32, 0x0000057C
+    __fnaddr_null: %SystemUInt32, 0x000044F0
+    __exitaddr_udon_event_start: %SystemUInt32, 0x00000658
+    __addr___udon_ctpop_i64_ret_15: %SystemUInt32, 0x00000E08
+    __addr___udon_ctpop_i64_ret_23: %SystemUInt32, 0x000010D4
+    __addr___udon_ctlz_i32_ret_9: %SystemUInt32, 0x000015BC
+    __addr___udon_ctlz_i64_ret_9: %SystemUInt32, 0x00001A00
+    __addr___udon_ctlz_i64_ret_20: %SystemUInt32, 0x00001BD4
+    __addr___udon_cttz_i32_ret_4: %SystemUInt32, 0x00001EFC
+    __addr___udon_cttz_i64_ret_15: %SystemUInt32, 0x000023B4
+    __addr___udon_cttz_i64_ret_22: %SystemUInt32, 0x000025E8
+    __addr___udon_memset_fill_ret_50: %SystemUInt32, 0x000031F4
+    __mem: %SystemInt32Array, null
+    __data_image: %SystemInt32Array, null
+    __fn_table: %SystemUInt32Array, null
+    __icall_ret: %SystemUInt32, null
+    __icall_retval: %SystemInt32, null
+    __stack_i32: %SystemInt32Array, null
+    __stack_i64: %SystemInt64Array, null
+    __stack_f32: %SystemSingleArray, null
+    __stack_f64: %SystemDoubleArray, null
+    __stack_obj: %SystemObjectArray, null
+    add3_ret: %SystemUInt32, null
+    add3_retval: %SystemInt32, null
+    add3_arg_0: %SystemInt32, null
+    add3_arg_1: %SystemInt32, null
+    add3_arg_2: %SystemInt32, null
+    add3_t: %SystemInt32, null
+    add3_u: %SystemInt32, null
+    twice_ret: %SystemUInt32, null
+    twice_retval: %SystemInt32, null
+    twice_arg_0: %SystemInt32, null
+    twice_r: %SystemInt32, null
+    factorial_ret: %SystemUInt32, null
+    factorial_retval: %SystemInt32, null
+    factorial_arg_0: %SystemInt32, null
+    factorial_base: %SystemBoolean, null
+    factorial_common_ret_op: %SystemInt32, null
+    factorial_m: %SystemInt32, null
+    factorial_spill_ok_0: %SystemBoolean, null
+    factorial_spill_ok_2: %SystemBoolean, null
+    factorial_sub: %SystemInt32, null
+    factorial_r: %SystemInt32, null
+    udon_event_start_ret: %SystemUInt32, null
+    udon_event_start_retval: %SystemInt32, null
+    udon_event_start_a: %SystemInt32, null
+    udon_event_start_spill_ok_2: %SystemBoolean, null
+    udon_event_start_spill_ok_4: %SystemBoolean, null
+    udon_event_start_f: %SystemInt32, null
+    udon_event_start_t: %SystemInt32, null
+    __retval__start: %SystemInt32, null
+    udon_event_start_depth0_8: %SystemBoolean, null
+    __const_bool_7: %SystemBoolean, null
+    __udon_ctpop_i32_ret: %SystemUInt32, null
+    __udon_ctpop_i32_retval: %SystemInt32, null
+    __udon_ctpop_i32_arg_0: %SystemInt32, null
+    __udon_ctpop_i32_lshr_s_0: %SystemInt32, null
+    __udon_ctpop_i32_a0: %SystemInt32, null
+    __udon_ctpop_i32_a1: %SystemInt32, null
+    __udon_ctpop_i32_a2: %SystemInt32, null
+    __udon_ctpop_i32_b0: %SystemInt32, null
+    __udon_ctpop_i32_lshr_s_1: %SystemInt32, null
+    __udon_ctpop_i32_b1: %SystemInt32, null
+    __udon_ctpop_i32_b2: %SystemInt32, null
+    __udon_ctpop_i32_b3: %SystemInt32, null
+    __udon_ctpop_i32_lshr_s_2: %SystemInt32, null
+    __udon_ctpop_i32_c0: %SystemInt32, null
+    __udon_ctpop_i32_c1: %SystemInt32, null
+    __udon_ctpop_i32_c2: %SystemInt32, null
+    __udon_ctpop_i32_d0: %SystemInt32, null
+    __udon_ctpop_i32_lshr_s_3: %SystemInt32, null
+    __udon_ctpop_i32_d1: %SystemInt32, null
+    __udon_ctpop_i64_ret: %SystemUInt32, null
+    __udon_ctpop_i64_retval: %SystemInt64, null
+    __udon_ctpop_i64_arg_0: %SystemInt64, null
+    __udon_ctpop_i64_lo: %SystemInt32, null
+    __const_i64_18: %SystemInt64, null
+    __const_i64_19: %SystemInt64, null
+    __udon_ctpop_i64_trunc_add_0: %SystemInt64, null
+    __udon_ctpop_i64_trunc_and_1: %SystemInt64, null
+    __udon_ctpop_i64_trunc_sub_2: %SystemInt64, null
+    __udon_ctpop_i64_trunc_i32_3: %SystemInt32, null
+    __udon_ctpop_i64_lshr_s_4: %SystemInt64, null
+    __const_i64_20: %SystemInt64, null
+    __udon_ctpop_i64_hi64: %SystemInt64, null
+    __udon_ctpop_i64_hi: %SystemInt32, null
+    __udon_ctpop_i64_trunc_add_5: %SystemInt64, null
+    __udon_ctpop_i64_trunc_and_6: %SystemInt64, null
+    __udon_ctpop_i64_trunc_sub_7: %SystemInt64, null
+    __udon_ctpop_i64_trunc_i32_8: %SystemInt32, null
+    __udon_ctpop_i64_spill_ok_9: %SystemBoolean, null
+    __udon_ctpop_i64_spill_ok_11: %SystemBoolean, null
+    __udon_ctpop_i64_spill_ok_13: %SystemBoolean, null
+    __udon_ctpop_i64_clo: %SystemInt32, null
+    __udon_ctpop_i64_spill_ok_17: %SystemBoolean, null
+    __udon_ctpop_i64_spill_ok_19: %SystemBoolean, null
+    __udon_ctpop_i64_spill_ok_21: %SystemBoolean, null
+    __udon_ctpop_i64_chi: %SystemInt32, null
+    __udon_ctpop_i64_sum: %SystemInt32, null
+    __udon_ctpop_i64_zext_25: %SystemInt64, null
+    __udon_ctpop_i64_wide: %SystemInt64, null
+    __udon_ctlz_i32_ret: %SystemUInt32, null
+    __udon_ctlz_i32_retval: %SystemInt32, null
+    __udon_ctlz_i32_arg_0: %SystemInt32, null
+    __udon_ctlz_i32_iszero: %SystemBoolean, null
+    __udon_ctlz_i32_lshr_s_0: %SystemInt32, null
+    __udon_ctlz_i32_s1: %SystemInt32, null
+    __udon_ctlz_i32_o1: %SystemInt32, null
+    __udon_ctlz_i32_lshr_s_1: %SystemInt32, null
+    __udon_ctlz_i32_s2: %SystemInt32, null
+    __udon_ctlz_i32_o2: %SystemInt32, null
+    __udon_ctlz_i32_lshr_s_2: %SystemInt32, null
+    __udon_ctlz_i32_s3: %SystemInt32, null
+    __udon_ctlz_i32_o3: %SystemInt32, null
+    __udon_ctlz_i32_lshr_s_3: %SystemInt32, null
+    __udon_ctlz_i32_s4: %SystemInt32, null
+    __udon_ctlz_i32_o4: %SystemInt32, null
+    __udon_ctlz_i32_lshr_s_4: %SystemInt32, null
+    __udon_ctlz_i32_s5: %SystemInt32, null
+    __udon_ctlz_i32_o5: %SystemInt32, null
+    __udon_ctlz_i32_spill_ok_5: %SystemBoolean, null
+    __udon_ctlz_i32_spill_ok_7: %SystemBoolean, null
+    __udon_ctlz_i32_pop: %SystemInt32, null
+    __udon_ctlz_i32_leading: %SystemInt32, null
+    __udon_ctlz_i64_ret: %SystemUInt32, null
+    __udon_ctlz_i64_retval: %SystemInt64, null
+    __udon_ctlz_i64_arg_0: %SystemInt64, null
+    __udon_ctlz_i64_lshr_s_0: %SystemInt64, null
+    __udon_ctlz_i64_hi: %SystemInt64, null
+    __udon_ctlz_i64_hitop: %SystemInt32, null
+    __udon_ctlz_i64_trunc_add_1: %SystemInt64, null
+    __udon_ctlz_i64_trunc_and_2: %SystemInt64, null
+    __udon_ctlz_i64_trunc_sub_3: %SystemInt64, null
+    __udon_ctlz_i64_trunc_i32_4: %SystemInt32, null
+    __udon_ctlz_i64_hizero: %SystemBoolean, null
+    __udon_ctlz_i64_spill_ok_5: %SystemBoolean, null
+    __udon_ctlz_i64_spill_ok_7: %SystemBoolean, null
+    __udon_ctlz_i64_h: %SystemInt32, null
+    __udon_ctlz_i64_zext_11: %SystemInt64, null
+    __udon_ctlz_i64_hw: %SystemInt64, null
+    __udon_ctlz_i64_lotop: %SystemInt32, null
+    __udon_ctlz_i64_trunc_add_12: %SystemInt64, null
+    __udon_ctlz_i64_trunc_and_13: %SystemInt64, null
+    __udon_ctlz_i64_trunc_sub_14: %SystemInt64, null
+    __udon_ctlz_i64_trunc_i32_15: %SystemInt32, null
+    __udon_ctlz_i64_spill_ok_16: %SystemBoolean, null
+    __udon_ctlz_i64_spill_ok_18: %SystemBoolean, null
+    __udon_ctlz_i64_l: %SystemInt32, null
+    __udon_ctlz_i64_zext_22: %SystemInt64, null
+    __udon_ctlz_i64_lw: %SystemInt64, null
+    __udon_ctlz_i64_plus: %SystemInt64, null
+    __udon_cttz_i32_ret: %SystemUInt32, null
+    __udon_cttz_i32_retval: %SystemInt32, null
+    __udon_cttz_i32_arg_0: %SystemInt32, null
+    __udon_cttz_i32_iszero: %SystemBoolean, null
+    __udon_cttz_i32_neg: %SystemInt32, null
+    __udon_cttz_i32_low: %SystemInt32, null
+    __udon_cttz_i32_below: %SystemInt32, null
+    __udon_cttz_i32_spill_ok_0: %SystemBoolean, null
+    __udon_cttz_i32_spill_ok_2: %SystemBoolean, null
+    __udon_cttz_i32_pop: %SystemInt32, null
+    __udon_cttz_i64_ret: %SystemUInt32, null
+    __udon_cttz_i64_retval: %SystemInt64, null
+    __udon_cttz_i64_arg_0: %SystemInt64, null
+    __udon_cttz_i64_lotop: %SystemInt32, null
+    __udon_cttz_i64_trunc_add_0: %SystemInt64, null
+    __udon_cttz_i64_trunc_and_1: %SystemInt64, null
+    __udon_cttz_i64_trunc_sub_2: %SystemInt64, null
+    __udon_cttz_i64_trunc_i32_3: %SystemInt32, null
+    __udon_cttz_i64_lozero: %SystemBoolean, null
+    __udon_cttz_i64_lshr_s_4: %SystemInt64, null
+    __udon_cttz_i64_hi: %SystemInt64, null
+    __udon_cttz_i64_hitop: %SystemInt32, null
+    __udon_cttz_i64_trunc_add_5: %SystemInt64, null
+    __udon_cttz_i64_trunc_and_6: %SystemInt64, null
+    __udon_cttz_i64_trunc_sub_7: %SystemInt64, null
+    __udon_cttz_i64_trunc_i32_8: %SystemInt32, null
+    __udon_cttz_i64_spill_ok_9: %SystemBoolean, null
+    __udon_cttz_i64_spill_ok_11: %SystemBoolean, null
+    __udon_cttz_i64_spill_ok_13: %SystemBoolean, null
+    __udon_cttz_i64_h: %SystemInt32, null
+    __udon_cttz_i64_zext_17: %SystemInt64, null
+    __udon_cttz_i64_hw: %SystemInt64, null
+    __udon_cttz_i64_plus: %SystemInt64, null
+    __udon_cttz_i64_spill_ok_18: %SystemBoolean, null
+    __udon_cttz_i64_spill_ok_20: %SystemBoolean, null
+    __udon_cttz_i64_l: %SystemInt32, null
+    __udon_cttz_i64_zext_24: %SystemInt64, null
+    __udon_cttz_i64_lw: %SystemInt64, null
+    __udon_memset_fill_ret: %SystemUInt32, null
+    __udon_memset_fill_arg_0: %SystemInt32, null
+    __udon_memset_fill_arg_1: %SystemInt32, null
+    __udon_memset_fill_arg_2: %SystemInt32, null
+    __udon_memset_fill_empty: %SystemBoolean, null
+    __udon_memset_fill_byte: %SystemInt32, null
+    __udon_memset_fill_dstp: %SystemInt32, null
+    __udon_memset_fill_wi_0: %SystemInt32, null
+    __udon_memset_fill_wv_1: %SystemInt32, null
+    __udon_memset_fill_ld_2: %SystemInt32, null
+    __udon_memset_fill_wb_3: %SystemInt32, null
+    __udon_memset_fill_wbs_4: %SystemInt32, null
+    __udon_memset_fill_wal_5: %SystemBoolean, null
+    __udon_memset_fill_wn_6: %SystemInt32, null
+    __udon_memset_fill_wv_7: %SystemInt32, null
+    __udon_memset_fill_inv_8: %SystemInt32, null
+    __udon_memset_fill_lo_9: %SystemInt32, null
+    __udon_memset_fill_msk_10: %SystemInt32, null
+    __udon_memset_fill_nmk_11: %SystemInt32, null
+    __udon_memset_fill_lm_12: %SystemInt32, null
+    __udon_memset_fill_hi_13: %SystemInt32, null
+    __udon_memset_fill_or_14: %SystemInt32, null
+    __udon_memset_fill_k_15: %SystemInt32, null
+    __udon_memset_fill_t_16: %SystemInt32, null
+    __udon_memset_fill_m_17: %SystemInt32, null
+    __udon_memset_fill_wi_18: %SystemInt32, null
+    __udon_memset_fill_wb_19: %SystemInt32, null
+    __udon_memset_fill_wbs_20: %SystemInt32, null
+    __udon_memset_fill_wal_21: %SystemBoolean, null
+    __udon_memset_fill_wn_22: %SystemInt32, null
+    __udon_memset_fill_sh_23: %SystemInt32, null
+    __udon_memset_fill_lk_24: %SystemInt32, null
+    __udon_memset_fill_hk_25: %SystemInt32, null
+    __udon_memset_fill_inv_26: %SystemInt32, null
+    __udon_memset_fill_wv_27: %SystemInt32, null
+    __udon_memset_fill_kl_28: %SystemInt32, null
+    __udon_memset_fill_vl_29: %SystemInt32, null
+    __udon_memset_fill_nl_30: %SystemInt32, null
+    __udon_memset_fill_wv_31: %SystemInt32, null
+    __udon_memset_fill_kh_32: %SystemInt32, null
+    __udon_memset_fill_vh_33: %SystemInt32, null
+    __udon_memset_fill_vhm_34: %SystemInt32, null
+    __udon_memset_fill_nh_35: %SystemInt32, null
+    __udon_memset_fill_covered: %SystemInt32, null
+    __udon_memset_fill_remaining: %SystemInt32, null
+    __udon_memset_fill_uxor_l_36: %SystemInt32, null
+    __udon_memset_fill_uxor_r_37: %SystemInt32, null
+    __udon_memset_fill_take: %SystemBoolean, null
+    __udon_memset_fill_chunk: %SystemInt32, null
+    __udon_memset_fill_src: %SystemInt32, null
+    __udon_memset_fill_dstoff: %SystemInt32, null
+    __udon_memset_fill_dst2: %SystemInt32, null
+    __udon_memset_fill_spill_ok_38: %SystemBoolean, null
+    __udon_memset_fill_spill_ok_40: %SystemBoolean, null
+    __udon_memset_fill_spill_ok_42: %SystemBoolean, null
+    __udon_memset_fill_spill_ok_44: %SystemBoolean, null
+    __udon_memset_fill_spill_ok_46: %SystemBoolean, null
+    __udon_memset_fill_spill_ok_48: %SystemBoolean, null
+    __udon_memcpy_fill_arg_0: %SystemInt32, null
+    __udon_memcpy_fill_arg_1: %SystemInt32, null
+    __udon_memcpy_fill_arg_2: %SystemInt32, null
+    __udon_memset_fill_chunk2: %SystemInt32, null
+    __udon_memset_fill_covered_next: %SystemInt32, null
+    __udon_memset_fill_finished: %SystemBoolean, null
+    __udon_memcpy_fill_ret: %SystemUInt32, null
+    __udon_memcpy_fill_empty: %SystemBoolean, null
+    __udon_memcpy_fill_i: %SystemInt32, null
+    __udon_memcpy_fill_dp: %SystemInt32, null
+    __udon_memcpy_fill_sp: %SystemInt32, null
+    __udon_memcpy_fill_spa: %SystemInt32, null
+    __udon_memcpy_fill_dpa: %SystemInt32, null
+    __udon_memcpy_fill_wi_0: %SystemInt32, null
+    __udon_memcpy_fill_wv_1: %SystemInt32, null
+    __udon_memcpy_fill_ld_2: %SystemInt32, null
+    __udon_memcpy_fill_wb_3: %SystemInt32, null
+    __udon_memcpy_fill_wbs_4: %SystemInt32, null
+    __udon_memcpy_fill_wal_5: %SystemBoolean, null
+    __udon_memcpy_fill_wn_6: %SystemInt32, null
+    __udon_memcpy_fill_wv_7: %SystemInt32, null
+    __udon_memcpy_fill_inv_8: %SystemInt32, null
+    __udon_memcpy_fill_lo_9: %SystemInt32, null
+    __udon_memcpy_fill_msk_10: %SystemInt32, null
+    __udon_memcpy_fill_nmk_11: %SystemInt32, null
+    __udon_memcpy_fill_lm_12: %SystemInt32, null
+    __udon_memcpy_fill_hi_13: %SystemInt32, null
+    __udon_memcpy_fill_or_14: %SystemInt32, null
+    __udon_memcpy_fill_ldm_15: %SystemInt32, null
+    __udon_memcpy_fill_ldl_16: %SystemInt32, null
+    __udon_memcpy_fill_ldr_17: %SystemInt32, null
+    __udon_memcpy_fill_v: %SystemInt32, null
+    __udon_memcpy_fill_wi_18: %SystemInt32, null
+    __udon_memcpy_fill_wv_19: %SystemInt32, null
+    __udon_memcpy_fill_ld_20: %SystemInt32, null
+    __udon_memcpy_fill_wb_21: %SystemInt32, null
+    __udon_memcpy_fill_wbs_22: %SystemInt32, null
+    __udon_memcpy_fill_wal_23: %SystemBoolean, null
+    __udon_memcpy_fill_wn_24: %SystemInt32, null
+    __udon_memcpy_fill_wv_25: %SystemInt32, null
+    __udon_memcpy_fill_inv_26: %SystemInt32, null
+    __udon_memcpy_fill_lo_27: %SystemInt32, null
+    __udon_memcpy_fill_msk_28: %SystemInt32, null
+    __udon_memcpy_fill_nmk_29: %SystemInt32, null
+    __udon_memcpy_fill_lm_30: %SystemInt32, null
+    __udon_memcpy_fill_hi_31: %SystemInt32, null
+    __udon_memcpy_fill_or_32: %SystemInt32, null
+    __udon_memcpy_fill_k_33: %SystemInt32, null
+    __udon_memcpy_fill_t_34: %SystemInt32, null
+    __udon_memcpy_fill_m_35: %SystemInt32, null
+    __udon_memcpy_fill_wi_36: %SystemInt32, null
+    __udon_memcpy_fill_wb_37: %SystemInt32, null
+    __udon_memcpy_fill_wbs_38: %SystemInt32, null
+    __udon_memcpy_fill_wal_39: %SystemBoolean, null
+    __udon_memcpy_fill_wn_40: %SystemInt32, null
+    __udon_memcpy_fill_sh_41: %SystemInt32, null
+    __udon_memcpy_fill_lk_42: %SystemInt32, null
+    __udon_memcpy_fill_hk_43: %SystemInt32, null
+    __udon_memcpy_fill_inv_44: %SystemInt32, null
+    __udon_memcpy_fill_wv_45: %SystemInt32, null
+    __udon_memcpy_fill_kl_46: %SystemInt32, null
+    __udon_memcpy_fill_vl_47: %SystemInt32, null
+    __udon_memcpy_fill_nl_48: %SystemInt32, null
+    __udon_memcpy_fill_wv_49: %SystemInt32, null
+    __udon_memcpy_fill_kh_50: %SystemInt32, null
+    __udon_memcpy_fill_vh_51: %SystemInt32, null
+    __udon_memcpy_fill_vhm_52: %SystemInt32, null
+    __udon_memcpy_fill_nh_53: %SystemInt32, null
+    __udon_memcpy_fill_next: %SystemInt32, null
+    __udon_memcpy_fill_finished: %SystemBoolean, null
+    __udon_bitreverse_i32_ret: %SystemUInt32, null
+    __udon_bitreverse_i32_retval: %SystemInt32, null
+    __udon_bitreverse_i32_arg_0: %SystemInt32, null
+    __udon_bitreverse_i32_s1a: %SystemInt32, null
+    __udon_bitreverse_i32_s1b: %SystemInt32, null
+    __udon_bitreverse_i32_lshr_s_0: %SystemInt32, null
+    __udon_bitreverse_i32_s1c: %SystemInt32, null
+    __udon_bitreverse_i32_s1d: %SystemInt32, null
+    __udon_bitreverse_i32_m1: %SystemInt32, null
+    __udon_bitreverse_i32_s2a: %SystemInt32, null
+    __udon_bitreverse_i32_s2b: %SystemInt32, null
+    __udon_bitreverse_i32_lshr_s_1: %SystemInt32, null
+    __udon_bitreverse_i32_s2c: %SystemInt32, null
+    __udon_bitreverse_i32_s2d: %SystemInt32, null
+    __udon_bitreverse_i32_m2: %SystemInt32, null
+    __udon_bitreverse_i32_s4a: %SystemInt32, null
+    __udon_bitreverse_i32_s4b: %SystemInt32, null
+    __udon_bitreverse_i32_lshr_s_2: %SystemInt32, null
+    __udon_bitreverse_i32_s4c: %SystemInt32, null
+    __udon_bitreverse_i32_s4d: %SystemInt32, null
+    __udon_bitreverse_i32_m4: %SystemInt32, null
+    __udon_bitreverse_i32_s8a: %SystemInt32, null
+    __udon_bitreverse_i32_s8b: %SystemInt32, null
+    __udon_bitreverse_i32_lshr_s_3: %SystemInt32, null
+    __udon_bitreverse_i32_s8c: %SystemInt32, null
+    __udon_bitreverse_i32_s8d: %SystemInt32, null
+    __udon_bitreverse_i32_m8: %SystemInt32, null
+    __udon_bitreverse_i32_hi: %SystemInt32, null
+    __udon_bitreverse_i32_lshr_s_4: %SystemInt32, null
+    __udon_bitreverse_i32_lo: %SystemInt32, null
+    __udon_bitreverse_i32_r: %SystemInt32, null
+    __udon_bitreverse_i64_ret: %SystemUInt32, null
+    __udon_bitreverse_i64_retval: %SystemInt64, null
+    __udon_bitreverse_i64_arg_0: %SystemInt64, null
+    __udon_bitreverse_i64_s1a: %SystemInt64, null
+    __const_i64_31: %SystemInt64, null
+    __udon_bitreverse_i64_s1b: %SystemInt64, null
+    __const_i64_32: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_0: %SystemInt64, null
+    __udon_bitreverse_i64_s1c: %SystemInt64, null
+    __const_i64_33: %SystemInt64, null
+    __udon_bitreverse_i64_s1d: %SystemInt64, null
+    __udon_bitreverse_i64_m1: %SystemInt64, null
+    __udon_bitreverse_i64_s2a: %SystemInt64, null
+    __const_i64_34: %SystemInt64, null
+    __udon_bitreverse_i64_s2b: %SystemInt64, null
+    __const_i64_35: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_1: %SystemInt64, null
+    __udon_bitreverse_i64_s2c: %SystemInt64, null
+    __const_i64_36: %SystemInt64, null
+    __udon_bitreverse_i64_s2d: %SystemInt64, null
+    __udon_bitreverse_i64_m2: %SystemInt64, null
+    __udon_bitreverse_i64_s4a: %SystemInt64, null
+    __const_i64_37: %SystemInt64, null
+    __udon_bitreverse_i64_s4b: %SystemInt64, null
+    __const_i64_38: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_2: %SystemInt64, null
+    __udon_bitreverse_i64_s4c: %SystemInt64, null
+    __const_i64_39: %SystemInt64, null
+    __udon_bitreverse_i64_s4d: %SystemInt64, null
+    __udon_bitreverse_i64_m4: %SystemInt64, null
+    __udon_bitreverse_i64_s8a: %SystemInt64, null
+    __const_i64_40: %SystemInt64, null
+    __udon_bitreverse_i64_s8b: %SystemInt64, null
+    __const_i64_41: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_3: %SystemInt64, null
+    __udon_bitreverse_i64_s8c: %SystemInt64, null
+    __const_i64_42: %SystemInt64, null
+    __udon_bitreverse_i64_s8d: %SystemInt64, null
+    __udon_bitreverse_i64_m8: %SystemInt64, null
+    __udon_bitreverse_i64_s16a: %SystemInt64, null
+    __const_i64_43: %SystemInt64, null
+    __udon_bitreverse_i64_s16b: %SystemInt64, null
+    __const_i64_44: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_4: %SystemInt64, null
+    __udon_bitreverse_i64_s16c: %SystemInt64, null
+    __const_i64_45: %SystemInt64, null
+    __udon_bitreverse_i64_s16d: %SystemInt64, null
+    __udon_bitreverse_i64_m16: %SystemInt64, null
+    __udon_bitreverse_i64_hi: %SystemInt64, null
+    __udon_bitreverse_i64_lshr_s_5: %SystemInt64, null
+    __udon_bitreverse_i64_lo: %SystemInt64, null
+    __udon_bitreverse_i64_r: %SystemInt64, null
+.data_end
+.code_start
+    .export _start
+
+    add3_body:
+        JUMP, add3_bb0
+
+    add3_bb0:
+        PUSH, add3_arg_0
+        PUSH, add3_arg_1
+        PUSH, add3_t
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, add3_t
+        PUSH, add3_arg_2
+        PUSH, add3_u
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, add3_u
+        PUSH, add3_retval
+        COPY
+        JUMP_INDIRECT, add3_ret
+
+    twice_body:
+        JUMP, twice_bb1
+
+    twice_bb1:
+        PUSH, twice_arg_0
+        PUSH, add3_arg_0
+        COPY
+        PUSH, twice_arg_0
+        PUSH, add3_arg_1
+        COPY
+        PUSH, twice_arg_0
+        PUSH, add3_arg_2
+        COPY
+        PUSH, __addr_twice_ret_0
+        PUSH, add3_ret
+        COPY
+        JUMP, add3_body
+
+    twice_ret_0:
+        NOP
+        PUSH, add3_retval
+        PUSH, twice_r
+        COPY
+        JUMP, twice_cont_1
+
+    twice_cont_1:
+        PUSH, twice_r
+        PUSH, twice_retval
+        COPY
+        JUMP_INDIRECT, twice_ret
+
+    factorial_body:
+        JUMP, factorial_bb2
+
+    factorial_bb2:
+        PUSH, factorial_arg_0
+        PUSH, __const_i32_0
+        PUSH, factorial_base
+        EXTERN, "SystemInt32.__op_LessThanOrEqual__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, factorial_base
+        JUMP_IF_FALSE, factorial_bb5
+        JUMP, factorial_bb3
+
+    factorial_bb3:
+        PUSH, __const_i32_0
+        PUSH, factorial_common_ret_op
+        COPY
+        JUMP, factorial_bb4
+
+    factorial_bb4:
+        PUSH, factorial_common_ret_op
+        PUSH, factorial_retval
+        COPY
+        JUMP_INDIRECT, factorial_ret
+
+    factorial_bb5:
+        PUSH, factorial_arg_0
+        PUSH, __const_i32_0
+        PUSH, factorial_m
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, factorial_spill_ok_0
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, factorial_spill_ok_0
+        JUMP_IF_FALSE, factorial_spill_1_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, factorial_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, factorial_spill_1_ok
+
+    factorial_spill_1_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    factorial_spill_1_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, factorial_spill_ok_2
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, factorial_spill_ok_2
+        JUMP_IF_FALSE, factorial_spill_3_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, factorial_arg_0
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, factorial_spill_3_ok
+
+    factorial_spill_3_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    factorial_spill_3_ok:
+        PUSH, factorial_m
+        PUSH, factorial_arg_0
+        COPY
+        PUSH, __addr_factorial_ret_4
+        PUSH, factorial_ret
+        COPY
+        JUMP, factorial_body
+
+    factorial_ret_4:
+        NOP
+        PUSH, factorial_retval
+        PUSH, factorial_sub
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, factorial_arg_0
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, factorial_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, factorial_cont_5
+
+    factorial_cont_5:
+        PUSH, factorial_arg_0
+        PUSH, factorial_sub
+        PUSH, factorial_r
+        EXTERN, "SystemInt32.__op_Multiplication__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, factorial_r
+        PUSH, factorial_common_ret_op
+        COPY
+        JUMP, factorial_bb4
+
+    udon_event_start_body:
+        JUMP, udon_event_start_bb6
+
+    udon_event_start_bb6:
+        PUSH, __const_i32_2
+        PUSH, twice_arg_0
+        COPY
+        PUSH, __addr_udon_event_start_ret_0
+        PUSH, twice_ret
+        COPY
+        JUMP, twice_body
+
+    udon_event_start_ret_0:
+        NOP
+        PUSH, twice_retval
+        PUSH, udon_event_start_a
+        COPY
+        JUMP, udon_event_start_cont_1
+
+    udon_event_start_cont_1:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, udon_event_start_spill_ok_2
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, udon_event_start_spill_ok_2
+        JUMP_IF_FALSE, udon_event_start_spill_3_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, udon_event_start_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, udon_event_start_spill_3_ok
+
+    udon_event_start_spill_3_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    udon_event_start_spill_3_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, udon_event_start_spill_ok_4
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, udon_event_start_spill_ok_4
+        JUMP_IF_FALSE, udon_event_start_spill_5_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, udon_event_start_a
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, udon_event_start_spill_5_ok
+
+    udon_event_start_spill_5_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    udon_event_start_spill_5_ok:
+        PUSH, __const_i32_3
+        PUSH, factorial_arg_0
+        COPY
+        PUSH, __addr_udon_event_start_ret_6
+        PUSH, factorial_ret
+        COPY
+        JUMP, factorial_body
+
+    udon_event_start_ret_6:
+        NOP
+        PUSH, factorial_retval
+        PUSH, udon_event_start_f
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, udon_event_start_a
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, udon_event_start_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, udon_event_start_cont_7
+
+    udon_event_start_cont_7:
+        PUSH, udon_event_start_a
+        PUSH, udon_event_start_f
+        PUSH, udon_event_start_t
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, udon_event_start_t
+        PUSH, udon_event_start_retval
+        COPY
+        JUMP_INDIRECT, udon_event_start_ret
+
+    udon_event_start_exit:
+        PUSH, __const_i32_4
+        PUSH, __halt_reason
+        COPY
+        PUSH, udon_event_start_retval
+        PUSH, __retval__start
+        COPY
+        JUMP_INDIRECT, __haltaddr
+
+    _start:
+        PUSH, __depth
+        PUSH, __const_i32_4
+        PUSH, udon_event_start_depth0_8
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, udon_event_start_depth0_8
+        JUMP_IF_FALSE, udon_event_start_reset_done
+        JUMP, udon_event_start_reset
+
+    udon_event_start_reset:
+        PUSH, __const_i32_5
+        PUSH, __sp
+        COPY
+        PUSH, __const_i32_4
+        PUSH, __sptr_i32
+        COPY
+        PUSH, __const_i32_4
+        PUSH, __sptr_i64
+        COPY
+        PUSH, __const_i32_4
+        PUSH, __sptr_f32
+        COPY
+        PUSH, __const_i32_4
+        PUSH, __sptr_f64
+        COPY
+        PUSH, __const_i32_4
+        PUSH, __sptr_obj
+        COPY
+        JUMP, udon_event_start_reset_done
+
+    udon_event_start_reset_done:
+        PUSH, __depth
+        PUSH, __const_i32_0
+        PUSH, __depth
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __inited
+        JUMP_IF_FALSE, udon_event_start_init
+        JUMP, udon_event_start_prologue_done
+
+    udon_event_start_init:
+        PUSH, __const_i32_6
+        PUSH, __mem
+        EXTERN, "SystemInt32Array.__ctor__SystemInt32__SystemInt32Array"
+        PUSH, __data_image
+        PUSH, __mem
+        PUSH, __const_i32_2
+        EXTERN, "SystemInt32Array.__CopyTo__SystemArray_SystemInt32__SystemVoid"
+        PUSH, __const_i32_1
+        PUSH, __stack_i32
+        EXTERN, "SystemInt32Array.__ctor__SystemInt32__SystemInt32Array"
+        PUSH, __const_i32_1
+        PUSH, __stack_i64
+        EXTERN, "SystemInt64Array.__ctor__SystemInt32__SystemInt64Array"
+        PUSH, __const_i32_1
+        PUSH, __stack_f32
+        EXTERN, "SystemSingleArray.__ctor__SystemInt32__SystemSingleArray"
+        PUSH, __const_i32_1
+        PUSH, __stack_f64
+        EXTERN, "SystemDoubleArray.__ctor__SystemInt32__SystemDoubleArray"
+        PUSH, __const_i32_1
+        PUSH, __stack_obj
+        EXTERN, "SystemObjectArray.__ctor__SystemInt32__SystemObjectArray"
+        PUSH, __const_i32_0
+        PUSH, __fn_table
+        EXTERN, "SystemUInt32Array.__ctor__SystemInt32__SystemUInt32Array"
+        PUSH, __fn_table
+        PUSH, __const_i32_4
+        PUSH, __fnaddr_null
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __const_bool_7
+        PUSH, __inited
+        COPY
+        JUMP, udon_event_start_prologue_done
+
+    udon_event_start_prologue_done:
+        PUSH, __exitaddr_udon_event_start
+        PUSH, udon_event_start_ret
+        COPY
+        JUMP, udon_event_start_body
+
+    __udon_ctpop_i32_body:
+        JUMP, __udon_ctpop_i32_bb7
+
+    __udon_ctpop_i32_bb7:
+        PUSH, __udon_ctpop_i32_arg_0
+        PUSH, __const_i32_0
+        PUSH, __udon_ctpop_i32_lshr_s_0
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_lshr_s_0
+        PUSH, __const_i32_8
+        PUSH, __udon_ctpop_i32_a0
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_a0
+        PUSH, __const_i32_9
+        PUSH, __udon_ctpop_i32_a1
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_arg_0
+        PUSH, __udon_ctpop_i32_a1
+        PUSH, __udon_ctpop_i32_a2
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_a2
+        PUSH, __const_i32_10
+        PUSH, __udon_ctpop_i32_b0
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_a2
+        PUSH, __const_i32_11
+        PUSH, __udon_ctpop_i32_lshr_s_1
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_lshr_s_1
+        PUSH, __const_i32_12
+        PUSH, __udon_ctpop_i32_b1
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_b1
+        PUSH, __const_i32_10
+        PUSH, __udon_ctpop_i32_b2
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_b0
+        PUSH, __udon_ctpop_i32_b2
+        PUSH, __udon_ctpop_i32_b3
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_b3
+        PUSH, __const_i32_2
+        PUSH, __udon_ctpop_i32_lshr_s_2
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_lshr_s_2
+        PUSH, __const_i32_13
+        PUSH, __udon_ctpop_i32_c0
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_b3
+        PUSH, __udon_ctpop_i32_c0
+        PUSH, __udon_ctpop_i32_c1
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_c1
+        PUSH, __const_i32_14
+        PUSH, __udon_ctpop_i32_c2
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_c2
+        PUSH, __const_i32_15
+        PUSH, __udon_ctpop_i32_d0
+        EXTERN, "SystemInt32.__op_Multiplication__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_d0
+        PUSH, __const_i32_16
+        PUSH, __udon_ctpop_i32_lshr_s_3
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_lshr_s_3
+        PUSH, __const_i32_17
+        PUSH, __udon_ctpop_i32_d1
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i32_d1
+        PUSH, __udon_ctpop_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctpop_i32_ret
+
+    __udon_ctpop_i64_body:
+        JUMP, __udon_ctpop_i64_bb8
+
+    __udon_ctpop_i64_bb8:
+        PUSH, __udon_ctpop_i64_arg_0
+        PUSH, __const_i64_18
+        PUSH, __udon_ctpop_i64_trunc_add_0
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_add_0
+        PUSH, __const_i64_19
+        PUSH, __udon_ctpop_i64_trunc_and_1
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_and_1
+        PUSH, __const_i64_18
+        PUSH, __udon_ctpop_i64_trunc_sub_2
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_sub_2
+        PUSH, __udon_ctpop_i64_trunc_i32_3
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_ctpop_i64_trunc_i32_3
+        PUSH, __udon_ctpop_i64_lo
+        COPY
+        PUSH, __udon_ctpop_i64_arg_0
+        PUSH, __const_i64_20
+        PUSH, __udon_ctpop_i64_lshr_s_4
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_lshr_s_4
+        PUSH, __const_i64_19
+        PUSH, __udon_ctpop_i64_hi64
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_hi64
+        PUSH, __const_i64_18
+        PUSH, __udon_ctpop_i64_trunc_add_5
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_add_5
+        PUSH, __const_i64_19
+        PUSH, __udon_ctpop_i64_trunc_and_6
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_and_6
+        PUSH, __const_i64_18
+        PUSH, __udon_ctpop_i64_trunc_sub_7
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_trunc_sub_7
+        PUSH, __udon_ctpop_i64_trunc_i32_8
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_ctpop_i64_trunc_i32_8
+        PUSH, __udon_ctpop_i64_hi
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_9
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_9
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_10_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_10_ok
+
+    __udon_ctpop_i64_spill_10_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_10_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_11
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_11
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_12_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctpop_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_12_ok
+
+    __udon_ctpop_i64_spill_12_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_12_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_13
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_13
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_14_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_hi
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_14_ok
+
+    __udon_ctpop_i64_spill_14_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_14_ok:
+        PUSH, __udon_ctpop_i64_lo
+        PUSH, __udon_ctpop_i32_arg_0
+        COPY
+        PUSH, __addr___udon_ctpop_i64_ret_15
+        PUSH, __udon_ctpop_i32_ret
+        COPY
+        JUMP, __udon_ctpop_i32_body
+
+    __udon_ctpop_i64_ret_15:
+        NOP
+        PUSH, __udon_ctpop_i32_retval
+        PUSH, __udon_ctpop_i64_clo
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_hi
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctpop_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_ctpop_i64_cont_16
+
+    __udon_ctpop_i64_cont_16:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_17
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_17
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_18_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_18_ok
+
+    __udon_ctpop_i64_spill_18_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_18_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_19
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_19
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_20_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctpop_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_20_ok
+
+    __udon_ctpop_i64_spill_20_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_20_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctpop_i64_spill_ok_21
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctpop_i64_spill_ok_21
+        JUMP_IF_FALSE, __udon_ctpop_i64_spill_22_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_clo
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctpop_i64_spill_22_ok
+
+    __udon_ctpop_i64_spill_22_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctpop_i64_spill_22_ok:
+        PUSH, __udon_ctpop_i64_hi
+        PUSH, __udon_ctpop_i32_arg_0
+        COPY
+        PUSH, __addr___udon_ctpop_i64_ret_23
+        PUSH, __udon_ctpop_i32_ret
+        COPY
+        JUMP, __udon_ctpop_i32_body
+
+    __udon_ctpop_i64_ret_23:
+        NOP
+        PUSH, __udon_ctpop_i32_retval
+        PUSH, __udon_ctpop_i64_chi
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_clo
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctpop_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctpop_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_ctpop_i64_cont_24
+
+    __udon_ctpop_i64_cont_24:
+        PUSH, __udon_ctpop_i64_clo
+        PUSH, __udon_ctpop_i64_chi
+        PUSH, __udon_ctpop_i64_sum
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctpop_i64_sum
+        PUSH, __udon_ctpop_i64_zext_25
+        EXTERN, "SystemConvert.__ToInt64__SystemInt32__SystemInt64"
+        PUSH, __udon_ctpop_i64_zext_25
+        PUSH, __const_i64_19
+        PUSH, __udon_ctpop_i64_wide
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctpop_i64_wide
+        PUSH, __udon_ctpop_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctpop_i64_ret
+
+    __udon_ctlz_i32_body:
+        JUMP, __udon_ctlz_i32_bb9
+
+    __udon_ctlz_i32_bb9:
+        PUSH, __udon_ctlz_i32_arg_0
+        PUSH, __const_i32_4
+        PUSH, __udon_ctlz_i32_iszero
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i32_iszero
+        JUMP_IF_FALSE, __udon_ctlz_i32_bb11
+        JUMP, __udon_ctlz_i32_bb10
+
+    __udon_ctlz_i32_bb10:
+        PUSH, __const_i32_21
+        PUSH, __udon_ctlz_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctlz_i32_ret
+
+    __udon_ctlz_i32_bb11:
+        PUSH, __udon_ctlz_i32_arg_0
+        PUSH, __const_i32_0
+        PUSH, __udon_ctlz_i32_lshr_s_0
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_lshr_s_0
+        PUSH, __const_i32_8
+        PUSH, __udon_ctlz_i32_s1
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_arg_0
+        PUSH, __udon_ctlz_i32_s1
+        PUSH, __udon_ctlz_i32_o1
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o1
+        PUSH, __const_i32_11
+        PUSH, __udon_ctlz_i32_lshr_s_1
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_lshr_s_1
+        PUSH, __const_i32_12
+        PUSH, __udon_ctlz_i32_s2
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o1
+        PUSH, __udon_ctlz_i32_s2
+        PUSH, __udon_ctlz_i32_o2
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o2
+        PUSH, __const_i32_2
+        PUSH, __udon_ctlz_i32_lshr_s_2
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_lshr_s_2
+        PUSH, __const_i32_13
+        PUSH, __udon_ctlz_i32_s3
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o2
+        PUSH, __udon_ctlz_i32_s3
+        PUSH, __udon_ctlz_i32_o3
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o3
+        PUSH, __const_i32_22
+        PUSH, __udon_ctlz_i32_lshr_s_3
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_lshr_s_3
+        PUSH, __const_i32_23
+        PUSH, __udon_ctlz_i32_s4
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o3
+        PUSH, __udon_ctlz_i32_s4
+        PUSH, __udon_ctlz_i32_o4
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o4
+        PUSH, __const_i32_24
+        PUSH, __udon_ctlz_i32_lshr_s_4
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_lshr_s_4
+        PUSH, __const_i32_25
+        PUSH, __udon_ctlz_i32_s5
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_o4
+        PUSH, __udon_ctlz_i32_s5
+        PUSH, __udon_ctlz_i32_o5
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i32_spill_ok_5
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i32_spill_ok_5
+        JUMP_IF_FALSE, __udon_ctlz_i32_spill_6_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i32_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i32_spill_6_ok
+
+    __udon_ctlz_i32_spill_6_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i32_spill_6_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i32_spill_ok_7
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i32_spill_ok_7
+        JUMP_IF_FALSE, __udon_ctlz_i32_spill_8_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i32_arg_0
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i32_spill_8_ok
+
+    __udon_ctlz_i32_spill_8_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i32_spill_8_ok:
+        PUSH, __udon_ctlz_i32_o5
+        PUSH, __udon_ctpop_i32_arg_0
+        COPY
+        PUSH, __addr___udon_ctlz_i32_ret_9
+        PUSH, __udon_ctpop_i32_ret
+        COPY
+        JUMP, __udon_ctpop_i32_body
+
+    __udon_ctlz_i32_ret_9:
+        NOP
+        PUSH, __udon_ctpop_i32_retval
+        PUSH, __udon_ctlz_i32_pop
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i32_arg_0
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i32_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_ctlz_i32_cont_10
+
+    __udon_ctlz_i32_cont_10:
+        PUSH, __const_i32_21
+        PUSH, __udon_ctlz_i32_pop
+        PUSH, __udon_ctlz_i32_leading
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_ctlz_i32_leading
+        PUSH, __udon_ctlz_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctlz_i32_ret
+
+    __udon_ctlz_i64_body:
+        JUMP, __udon_ctlz_i64_bb12
+
+    __udon_ctlz_i64_bb12:
+        PUSH, __udon_ctlz_i64_arg_0
+        PUSH, __const_i64_20
+        PUSH, __udon_ctlz_i64_lshr_s_0
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_lshr_s_0
+        PUSH, __const_i64_19
+        PUSH, __udon_ctlz_i64_hi
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_hi
+        PUSH, __const_i64_18
+        PUSH, __udon_ctlz_i64_trunc_add_1
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_add_1
+        PUSH, __const_i64_19
+        PUSH, __udon_ctlz_i64_trunc_and_2
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_and_2
+        PUSH, __const_i64_18
+        PUSH, __udon_ctlz_i64_trunc_sub_3
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_sub_3
+        PUSH, __udon_ctlz_i64_trunc_i32_4
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_ctlz_i64_trunc_i32_4
+        PUSH, __udon_ctlz_i64_hitop
+        COPY
+        PUSH, __udon_ctlz_i64_hitop
+        PUSH, __const_i32_4
+        PUSH, __udon_ctlz_i64_hizero
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i64_hizero
+        JUMP_IF_FALSE, __udon_ctlz_i64_bb13
+        JUMP, __udon_ctlz_i64_bb14
+
+    __udon_ctlz_i64_bb13:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i64_spill_ok_5
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i64_spill_ok_5
+        JUMP_IF_FALSE, __udon_ctlz_i64_spill_6_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i64_spill_6_ok
+
+    __udon_ctlz_i64_bb14:
+        PUSH, __udon_ctlz_i64_arg_0
+        PUSH, __const_i64_18
+        PUSH, __udon_ctlz_i64_trunc_add_12
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_add_12
+        PUSH, __const_i64_19
+        PUSH, __udon_ctlz_i64_trunc_and_13
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_and_13
+        PUSH, __const_i64_18
+        PUSH, __udon_ctlz_i64_trunc_sub_14
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_trunc_sub_14
+        PUSH, __udon_ctlz_i64_trunc_i32_15
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_ctlz_i64_trunc_i32_15
+        PUSH, __udon_ctlz_i64_lotop
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i64_spill_ok_16
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i64_spill_ok_16
+        JUMP_IF_FALSE, __udon_ctlz_i64_spill_17_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i64_spill_17_ok
+
+    __udon_ctlz_i64_spill_6_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i64_spill_6_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i64_spill_ok_7
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i64_spill_ok_7
+        JUMP_IF_FALSE, __udon_ctlz_i64_spill_8_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctlz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i64_spill_8_ok
+
+    __udon_ctlz_i64_spill_8_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i64_spill_8_ok:
+        PUSH, __udon_ctlz_i64_hitop
+        PUSH, __udon_ctlz_i32_arg_0
+        COPY
+        PUSH, __addr___udon_ctlz_i64_ret_9
+        PUSH, __udon_ctlz_i32_ret
+        COPY
+        JUMP, __udon_ctlz_i32_body
+
+    __udon_ctlz_i64_ret_9:
+        NOP
+        PUSH, __udon_ctlz_i32_retval
+        PUSH, __udon_ctlz_i64_h
+        COPY
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctlz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_ctlz_i64_cont_10
+
+    __udon_ctlz_i64_cont_10:
+        PUSH, __udon_ctlz_i64_h
+        PUSH, __udon_ctlz_i64_zext_11
+        EXTERN, "SystemConvert.__ToInt64__SystemInt32__SystemInt64"
+        PUSH, __udon_ctlz_i64_zext_11
+        PUSH, __const_i64_19
+        PUSH, __udon_ctlz_i64_hw
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_hw
+        PUSH, __udon_ctlz_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctlz_i64_ret
+
+    __udon_ctlz_i64_spill_17_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i64_spill_17_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_ctlz_i64_spill_ok_18
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_ctlz_i64_spill_ok_18
+        JUMP_IF_FALSE, __udon_ctlz_i64_spill_19_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctlz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_ctlz_i64_spill_19_ok
+
+    __udon_ctlz_i64_spill_19_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_ctlz_i64_spill_19_ok:
+        PUSH, __udon_ctlz_i64_lotop
+        PUSH, __udon_ctlz_i32_arg_0
+        COPY
+        PUSH, __addr___udon_ctlz_i64_ret_20
+        PUSH, __udon_ctlz_i32_ret
+        COPY
+        JUMP, __udon_ctlz_i32_body
+
+    __udon_ctlz_i64_ret_20:
+        NOP
+        PUSH, __udon_ctlz_i32_retval
+        PUSH, __udon_ctlz_i64_l
+        COPY
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_ctlz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_ctlz_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_ctlz_i64_cont_21
+
+    __udon_ctlz_i64_cont_21:
+        PUSH, __udon_ctlz_i64_l
+        PUSH, __udon_ctlz_i64_zext_22
+        EXTERN, "SystemConvert.__ToInt64__SystemInt32__SystemInt64"
+        PUSH, __udon_ctlz_i64_zext_22
+        PUSH, __const_i64_19
+        PUSH, __udon_ctlz_i64_lw
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_lw
+        PUSH, __const_i64_20
+        PUSH, __udon_ctlz_i64_plus
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_ctlz_i64_plus
+        PUSH, __udon_ctlz_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_ctlz_i64_ret
+
+    __udon_cttz_i32_body:
+        JUMP, __udon_cttz_i32_bb15
+
+    __udon_cttz_i32_bb15:
+        PUSH, __udon_cttz_i32_arg_0
+        PUSH, __const_i32_4
+        PUSH, __udon_cttz_i32_iszero
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i32_iszero
+        JUMP_IF_FALSE, __udon_cttz_i32_bb17
+        JUMP, __udon_cttz_i32_bb16
+
+    __udon_cttz_i32_bb16:
+        PUSH, __const_i32_21
+        PUSH, __udon_cttz_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_cttz_i32_ret
+
+    __udon_cttz_i32_bb17:
+        PUSH, __const_i32_4
+        PUSH, __udon_cttz_i32_arg_0
+        PUSH, __udon_cttz_i32_neg
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_cttz_i32_arg_0
+        PUSH, __udon_cttz_i32_neg
+        PUSH, __udon_cttz_i32_low
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_cttz_i32_low
+        PUSH, __const_i32_0
+        PUSH, __udon_cttz_i32_below
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i32_spill_ok_0
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i32_spill_ok_0
+        JUMP_IF_FALSE, __udon_cttz_i32_spill_1_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i32_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i32_spill_1_ok
+
+    __udon_cttz_i32_spill_1_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i32_spill_1_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i32_spill_ok_2
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i32_spill_ok_2
+        JUMP_IF_FALSE, __udon_cttz_i32_spill_3_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i32_arg_0
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i32_spill_3_ok
+
+    __udon_cttz_i32_spill_3_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i32_spill_3_ok:
+        PUSH, __udon_cttz_i32_below
+        PUSH, __udon_ctpop_i32_arg_0
+        COPY
+        PUSH, __addr___udon_cttz_i32_ret_4
+        PUSH, __udon_ctpop_i32_ret
+        COPY
+        JUMP, __udon_ctpop_i32_body
+
+    __udon_cttz_i32_ret_4:
+        NOP
+        PUSH, __udon_ctpop_i32_retval
+        PUSH, __udon_cttz_i32_pop
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i32_arg_0
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i32_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_cttz_i32_cont_5
+
+    __udon_cttz_i32_cont_5:
+        PUSH, __udon_cttz_i32_pop
+        PUSH, __udon_cttz_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_cttz_i32_ret
+
+    __udon_cttz_i64_body:
+        JUMP, __udon_cttz_i64_bb18
+
+    __udon_cttz_i64_bb18:
+        PUSH, __udon_cttz_i64_arg_0
+        PUSH, __const_i64_18
+        PUSH, __udon_cttz_i64_trunc_add_0
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_add_0
+        PUSH, __const_i64_19
+        PUSH, __udon_cttz_i64_trunc_and_1
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_and_1
+        PUSH, __const_i64_18
+        PUSH, __udon_cttz_i64_trunc_sub_2
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_sub_2
+        PUSH, __udon_cttz_i64_trunc_i32_3
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_cttz_i64_trunc_i32_3
+        PUSH, __udon_cttz_i64_lotop
+        COPY
+        PUSH, __udon_cttz_i64_lotop
+        PUSH, __const_i32_4
+        PUSH, __udon_cttz_i64_lozero
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_lozero
+        JUMP_IF_FALSE, __udon_cttz_i64_bb20
+        JUMP, __udon_cttz_i64_bb19
+
+    __udon_cttz_i64_bb19:
+        PUSH, __udon_cttz_i64_arg_0
+        PUSH, __const_i64_20
+        PUSH, __udon_cttz_i64_lshr_s_4
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_lshr_s_4
+        PUSH, __const_i64_19
+        PUSH, __udon_cttz_i64_hi
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_hi
+        PUSH, __const_i64_18
+        PUSH, __udon_cttz_i64_trunc_add_5
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_add_5
+        PUSH, __const_i64_19
+        PUSH, __udon_cttz_i64_trunc_and_6
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_and_6
+        PUSH, __const_i64_18
+        PUSH, __udon_cttz_i64_trunc_sub_7
+        EXTERN, "SystemInt64.__op_Subtraction__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_trunc_sub_7
+        PUSH, __udon_cttz_i64_trunc_i32_8
+        EXTERN, "SystemConvert.__ToInt32__SystemInt64__SystemInt32"
+        PUSH, __udon_cttz_i64_trunc_i32_8
+        PUSH, __udon_cttz_i64_hitop
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i64_spill_ok_9
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_spill_ok_9
+        JUMP_IF_FALSE, __udon_cttz_i64_spill_10_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i64_spill_10_ok
+
+    __udon_cttz_i64_bb20:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i64_spill_ok_18
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_spill_ok_18
+        JUMP_IF_FALSE, __udon_cttz_i64_spill_19_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i64_spill_19_ok
+
+    __udon_cttz_i64_spill_10_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i64_spill_10_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i64_spill_ok_11
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_spill_ok_11
+        JUMP_IF_FALSE, __udon_cttz_i64_spill_12_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_cttz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i64_spill_12_ok
+
+    __udon_cttz_i64_spill_12_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i64_spill_12_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i64_spill_ok_13
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_spill_ok_13
+        JUMP_IF_FALSE, __udon_cttz_i64_spill_14_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_lotop
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i64_spill_14_ok
+
+    __udon_cttz_i64_spill_14_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i64_spill_14_ok:
+        PUSH, __udon_cttz_i64_hitop
+        PUSH, __udon_cttz_i32_arg_0
+        COPY
+        PUSH, __addr___udon_cttz_i64_ret_15
+        PUSH, __udon_cttz_i32_ret
+        COPY
+        JUMP, __udon_cttz_i32_body
+
+    __udon_cttz_i64_ret_15:
+        NOP
+        PUSH, __udon_cttz_i32_retval
+        PUSH, __udon_cttz_i64_h
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_lotop
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_cttz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_cttz_i64_cont_16
+
+    __udon_cttz_i64_cont_16:
+        PUSH, __udon_cttz_i64_h
+        PUSH, __udon_cttz_i64_zext_17
+        EXTERN, "SystemConvert.__ToInt64__SystemInt32__SystemInt64"
+        PUSH, __udon_cttz_i64_zext_17
+        PUSH, __const_i64_19
+        PUSH, __udon_cttz_i64_hw
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_hw
+        PUSH, __const_i64_20
+        PUSH, __udon_cttz_i64_plus
+        EXTERN, "SystemInt64.__op_Addition__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_plus
+        PUSH, __udon_cttz_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_cttz_i64_ret
+
+    __udon_cttz_i64_spill_19_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i64_spill_19_ok:
+        PUSH, __sptr_i64
+        PUSH, __const_i32_1
+        PUSH, __udon_cttz_i64_spill_ok_20
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_cttz_i64_spill_ok_20
+        JUMP_IF_FALSE, __udon_cttz_i64_spill_21_of
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_cttz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Set__SystemInt32_SystemInt64__SystemVoid"
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_cttz_i64_spill_21_ok
+
+    __udon_cttz_i64_spill_21_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_cttz_i64_spill_21_ok:
+        PUSH, __udon_cttz_i64_lotop
+        PUSH, __udon_cttz_i32_arg_0
+        COPY
+        PUSH, __addr___udon_cttz_i64_ret_22
+        PUSH, __udon_cttz_i32_ret
+        COPY
+        JUMP, __udon_cttz_i32_body
+
+    __udon_cttz_i64_ret_22:
+        NOP
+        PUSH, __udon_cttz_i32_retval
+        PUSH, __udon_cttz_i64_l
+        COPY
+        PUSH, __sptr_i64
+        PUSH, __const_i32_0
+        PUSH, __sptr_i64
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i64
+        PUSH, __sptr_i64
+        PUSH, __udon_cttz_i64_arg_0
+        EXTERN, "SystemInt64Array.__Get__SystemInt32__SystemInt64"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_cttz_i64_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_cttz_i64_cont_23
+
+    __udon_cttz_i64_cont_23:
+        PUSH, __udon_cttz_i64_l
+        PUSH, __udon_cttz_i64_zext_24
+        EXTERN, "SystemConvert.__ToInt64__SystemInt32__SystemInt64"
+        PUSH, __udon_cttz_i64_zext_24
+        PUSH, __const_i64_19
+        PUSH, __udon_cttz_i64_lw
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_cttz_i64_lw
+        PUSH, __udon_cttz_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_cttz_i64_ret
+
+    __udon_memset_fill_body:
+        JUMP, __udon_memset_fill_bb21
+
+    __udon_memset_fill_bb21:
+        PUSH, __udon_memset_fill_arg_2
+        PUSH, __const_i32_4
+        PUSH, __udon_memset_fill_empty
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_empty
+        JUMP_IF_FALSE, __udon_memset_fill_bb22
+        JUMP, __udon_memset_fill_bb28
+
+    __udon_memset_fill_bb22:
+        PUSH, __udon_memset_fill_arg_1
+        PUSH, __const_i32_17
+        PUSH, __udon_memset_fill_byte
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_arg_0
+        PUSH, __udon_memset_fill_dstp
+        COPY
+        PUSH, __udon_memset_fill_dstp
+        PUSH, __const_i32_11
+        PUSH, __udon_memset_fill_wi_0
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wi_0
+        PUSH, __udon_memset_fill_wv_1
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_dstp
+        PUSH, __const_i32_26
+        PUSH, __udon_memset_fill_wb_3
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wb_3
+        PUSH, __const_i32_26
+        PUSH, __udon_memset_fill_wbs_4
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wbs_4
+        PUSH, __const_i32_4
+        PUSH, __udon_memset_fill_wal_5
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_wal_5
+        JUMP_IF_FALSE, __udon_memset_fill_ld_0_un
+        JUMP, __udon_memset_fill_ld_0_al
+
+    __udon_memset_fill_bb23:
+        PUSH, __udon_memset_fill_arg_2
+        PUSH, __udon_memset_fill_covered
+        PUSH, __udon_memset_fill_remaining
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_remaining
+        PUSH, __const_i32_29
+        PUSH, __udon_memset_fill_uxor_l_36
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_covered
+        PUSH, __const_i32_29
+        PUSH, __udon_memset_fill_uxor_r_37
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_uxor_l_36
+        PUSH, __udon_memset_fill_uxor_r_37
+        PUSH, __udon_memset_fill_take
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_take
+        JUMP_IF_FALSE, __udon_memset_fill_bb25
+        JUMP, __udon_memset_fill_bb24
+
+    __udon_memset_fill_bb24:
+        PUSH, __udon_memset_fill_remaining
+        PUSH, __udon_memset_fill_chunk
+        COPY
+        JUMP, __udon_memset_fill_bb26
+
+    __udon_memset_fill_bb25:
+        PUSH, __udon_memset_fill_covered
+        PUSH, __udon_memset_fill_chunk
+        COPY
+        JUMP, __udon_memset_fill_bb26
+
+    __udon_memset_fill_bb26:
+        PUSH, __udon_memset_fill_arg_0
+        PUSH, __udon_memset_fill_src
+        COPY
+        PUSH, __udon_memset_fill_arg_0
+        PUSH, __udon_memset_fill_covered
+        PUSH, __udon_memset_fill_dstoff
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_dstoff
+        PUSH, __udon_memset_fill_dst2
+        COPY
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_38
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_38
+        JUMP_IF_FALSE, __udon_memset_fill_spill_39_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_ret
+        EXTERN, "SystemUInt32Array.__Set__SystemInt32_SystemUInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_39_ok
+
+    __udon_memset_fill_bb27:
+        PUSH, __udon_memset_fill_covered
+        PUSH, __udon_memset_fill_chunk2
+        PUSH, __udon_memset_fill_covered_next
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_covered_next
+        PUSH, __udon_memset_fill_arg_2
+        PUSH, __udon_memset_fill_finished
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_finished
+        JUMP_IF_FALSE, __udon_memset_fill_bb27_to___udon_memset_fill_bb23
+        JUMP, __udon_memset_fill_bb28
+
+    __udon_memset_fill_bb28:
+        JUMP_INDIRECT, __udon_memset_fill_ret
+
+    __udon_memset_fill_ld_0_al:
+        PUSH, __udon_memset_fill_wv_1
+        PUSH, __udon_memset_fill_ld_2
+        COPY
+        JUMP, __udon_memset_fill_ld_0_j
+
+    __udon_memset_fill_ld_0_un:
+        PUSH, __udon_memset_fill_wi_0
+        PUSH, __const_i32_0
+        PUSH, __udon_memset_fill_wn_6
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wn_6
+        PUSH, __udon_memset_fill_wv_7
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __const_i32_21
+        PUSH, __udon_memset_fill_wbs_4
+        PUSH, __udon_memset_fill_inv_8
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wv_1
+        PUSH, __udon_memset_fill_wbs_4
+        PUSH, __udon_memset_fill_lo_9
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_27
+        PUSH, __udon_memset_fill_inv_8
+        PUSH, __udon_memset_fill_msk_10
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_msk_10
+        PUSH, __const_i32_27
+        PUSH, __udon_memset_fill_nmk_11
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_lo_9
+        PUSH, __udon_memset_fill_nmk_11
+        PUSH, __udon_memset_fill_lm_12
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wv_7
+        PUSH, __udon_memset_fill_inv_8
+        PUSH, __udon_memset_fill_hi_13
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_lm_12
+        PUSH, __udon_memset_fill_hi_13
+        PUSH, __udon_memset_fill_or_14
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_or_14
+        PUSH, __udon_memset_fill_ld_2
+        COPY
+        JUMP, __udon_memset_fill_ld_0_j
+
+    __udon_memset_fill_ld_0_j:
+        NOP
+
+    __udon_memset_fill_ldc_1:
+        PUSH, __udon_memset_fill_ld_2
+        PUSH, __const_i32_28
+        PUSH, __udon_memset_fill_k_15
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_byte
+        PUSH, __const_i32_17
+        PUSH, __udon_memset_fill_t_16
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_k_15
+        PUSH, __udon_memset_fill_t_16
+        PUSH, __udon_memset_fill_m_17
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_dstp
+        PUSH, __const_i32_11
+        PUSH, __udon_memset_fill_wi_18
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_dstp
+        PUSH, __const_i32_26
+        PUSH, __udon_memset_fill_wb_19
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wb_19
+        PUSH, __const_i32_26
+        PUSH, __udon_memset_fill_wbs_20
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wbs_20
+        PUSH, __const_i32_4
+        PUSH, __udon_memset_fill_wal_21
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_wal_21
+        JUMP_IF_FALSE, __udon_memset_fill_st_2_un
+        JUMP, __udon_memset_fill_st_2_al
+
+    __udon_memset_fill_st_2_al:
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wi_18
+        PUSH, __udon_memset_fill_m_17
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        JUMP, __udon_memset_fill_st_2_j
+
+    __udon_memset_fill_st_2_un:
+        PUSH, __udon_memset_fill_wi_18
+        PUSH, __const_i32_0
+        PUSH, __udon_memset_fill_wn_22
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_0
+        PUSH, __udon_memset_fill_wbs_20
+        PUSH, __udon_memset_fill_sh_23
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_sh_23
+        PUSH, __const_i32_0
+        PUSH, __udon_memset_fill_lk_24
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_lk_24
+        PUSH, __const_i32_27
+        PUSH, __udon_memset_fill_hk_25
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_21
+        PUSH, __udon_memset_fill_wbs_20
+        PUSH, __udon_memset_fill_inv_26
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wi_18
+        PUSH, __udon_memset_fill_wv_27
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wv_27
+        PUSH, __udon_memset_fill_lk_24
+        PUSH, __udon_memset_fill_kl_28
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_m_17
+        PUSH, __udon_memset_fill_wbs_20
+        PUSH, __udon_memset_fill_vl_29
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_kl_28
+        PUSH, __udon_memset_fill_vl_29
+        PUSH, __udon_memset_fill_nl_30
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wi_18
+        PUSH, __udon_memset_fill_nl_30
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wn_22
+        PUSH, __udon_memset_fill_wv_31
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_wv_31
+        PUSH, __udon_memset_fill_hk_25
+        PUSH, __udon_memset_fill_kh_32
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_m_17
+        PUSH, __udon_memset_fill_inv_26
+        PUSH, __udon_memset_fill_vh_33
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_vh_33
+        PUSH, __udon_memset_fill_lk_24
+        PUSH, __udon_memset_fill_vhm_34
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memset_fill_kh_32
+        PUSH, __udon_memset_fill_vhm_34
+        PUSH, __udon_memset_fill_nh_35
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memset_fill_wn_22
+        PUSH, __udon_memset_fill_nh_35
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        JUMP, __udon_memset_fill_st_2_j
+
+    __udon_memset_fill_st_2_j:
+        NOP
+
+    __udon_memset_fill_stc_3:
+        PUSH, __const_i32_0
+        PUSH, __udon_memset_fill_covered
+        COPY
+        JUMP, __udon_memset_fill_bb23
+
+    __udon_memset_fill_spill_39_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_39_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_40
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_40
+        JUMP_IF_FALSE, __udon_memset_fill_spill_41_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_0
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_41_ok
+
+    __udon_memset_fill_spill_41_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_41_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_42
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_42
+        JUMP_IF_FALSE, __udon_memset_fill_spill_43_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_1
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_43_ok
+
+    __udon_memset_fill_spill_43_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_43_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_44
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_44
+        JUMP_IF_FALSE, __udon_memset_fill_spill_45_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_2
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_45_ok
+
+    __udon_memset_fill_spill_45_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_45_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_46
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_46
+        JUMP_IF_FALSE, __udon_memset_fill_spill_47_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_chunk
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_47_ok
+
+    __udon_memset_fill_spill_47_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_47_ok:
+        PUSH, __sptr_i32
+        PUSH, __const_i32_1
+        PUSH, __udon_memset_fill_spill_ok_48
+        EXTERN, "SystemInt32.__op_LessThan__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memset_fill_spill_ok_48
+        JUMP_IF_FALSE, __udon_memset_fill_spill_49_of
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_covered
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        JUMP, __udon_memset_fill_spill_49_ok
+
+    __udon_memset_fill_spill_49_of:
+        PUSH, __const_i32_0
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+
+    __udon_memset_fill_spill_49_ok:
+        PUSH, __udon_memset_fill_dst2
+        PUSH, __udon_memcpy_fill_arg_0
+        COPY
+        PUSH, __udon_memset_fill_src
+        PUSH, __udon_memcpy_fill_arg_1
+        COPY
+        PUSH, __udon_memset_fill_chunk
+        PUSH, __udon_memcpy_fill_arg_2
+        COPY
+        PUSH, __addr___udon_memset_fill_ret_50
+        PUSH, __udon_memcpy_fill_ret
+        COPY
+        JUMP, __udon_memcpy_fill_body
+
+    __udon_memset_fill_ret_50:
+        NOP
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_covered
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_chunk
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_2
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_1
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_arg_0
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __sptr_i32
+        PUSH, __const_i32_0
+        PUSH, __sptr_i32
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __stack_i32
+        PUSH, __sptr_i32
+        PUSH, __udon_memset_fill_ret
+        EXTERN, "SystemUInt32Array.__Get__SystemInt32__SystemUInt32"
+        JUMP, __udon_memset_fill_cont_51
+
+    __udon_memset_fill_cont_51:
+        PUSH, __udon_memset_fill_chunk
+        PUSH, __udon_memset_fill_chunk2
+        COPY
+        JUMP, __udon_memset_fill_bb27
+
+    __udon_memset_fill_bb27_to___udon_memset_fill_bb23:
+        PUSH, __udon_memset_fill_covered_next
+        PUSH, __udon_memset_fill_covered
+        COPY
+        JUMP, __udon_memset_fill_bb23
+
+    __udon_memcpy_fill_body:
+        JUMP, __udon_memcpy_fill_bb29
+
+    __udon_memcpy_fill_bb29:
+        PUSH, __udon_memcpy_fill_arg_2
+        PUSH, __const_i32_4
+        PUSH, __udon_memcpy_fill_empty
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memcpy_fill_empty
+        JUMP_IF_FALSE, __udon_memcpy_fill_bb29_to___udon_memcpy_fill_bb30
+        JUMP, __udon_memcpy_fill_bb31
+
+    __udon_memcpy_fill_bb30:
+        PUSH, __udon_memcpy_fill_arg_0
+        PUSH, __udon_memcpy_fill_i
+        PUSH, __udon_memcpy_fill_dp
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_arg_1
+        PUSH, __udon_memcpy_fill_i
+        PUSH, __udon_memcpy_fill_sp
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_sp
+        PUSH, __udon_memcpy_fill_spa
+        COPY
+        PUSH, __udon_memcpy_fill_dp
+        PUSH, __udon_memcpy_fill_dpa
+        COPY
+        PUSH, __udon_memcpy_fill_spa
+        PUSH, __const_i32_11
+        PUSH, __udon_memcpy_fill_wi_0
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wi_0
+        PUSH, __udon_memcpy_fill_wv_1
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_spa
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wb_3
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wb_3
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wbs_4
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wbs_4
+        PUSH, __const_i32_4
+        PUSH, __udon_memcpy_fill_wal_5
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memcpy_fill_wal_5
+        JUMP_IF_FALSE, __udon_memcpy_fill_ld_4_un
+        JUMP, __udon_memcpy_fill_ld_4_al
+
+    __udon_memcpy_fill_bb31:
+        JUMP_INDIRECT, __udon_memcpy_fill_ret
+
+    __udon_memcpy_fill_bb29_to___udon_memcpy_fill_bb30:
+        PUSH, __const_i32_4
+        PUSH, __udon_memcpy_fill_i
+        COPY
+        JUMP, __udon_memcpy_fill_bb30
+
+    __udon_memcpy_fill_ld_4_al:
+        PUSH, __udon_memcpy_fill_wv_1
+        PUSH, __udon_memcpy_fill_ld_2
+        COPY
+        JUMP, __udon_memcpy_fill_ld_4_j
+
+    __udon_memcpy_fill_ld_4_un:
+        PUSH, __udon_memcpy_fill_wi_0
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_wn_6
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wn_6
+        PUSH, __udon_memcpy_fill_wv_7
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __const_i32_21
+        PUSH, __udon_memcpy_fill_wbs_4
+        PUSH, __udon_memcpy_fill_inv_8
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_1
+        PUSH, __udon_memcpy_fill_wbs_4
+        PUSH, __udon_memcpy_fill_lo_9
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_27
+        PUSH, __udon_memcpy_fill_inv_8
+        PUSH, __udon_memcpy_fill_msk_10
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_msk_10
+        PUSH, __const_i32_27
+        PUSH, __udon_memcpy_fill_nmk_11
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_lo_9
+        PUSH, __udon_memcpy_fill_nmk_11
+        PUSH, __udon_memcpy_fill_lm_12
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_7
+        PUSH, __udon_memcpy_fill_inv_8
+        PUSH, __udon_memcpy_fill_hi_13
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_lm_12
+        PUSH, __udon_memcpy_fill_hi_13
+        PUSH, __udon_memcpy_fill_or_14
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_or_14
+        PUSH, __udon_memcpy_fill_ld_2
+        COPY
+        JUMP, __udon_memcpy_fill_ld_4_j
+
+    __udon_memcpy_fill_ld_4_j:
+        NOP
+
+    __udon_memcpy_fill_ldc_5:
+        PUSH, __udon_memcpy_fill_ld_2
+        PUSH, __const_i32_17
+        PUSH, __udon_memcpy_fill_ldm_15
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_ldm_15
+        PUSH, __const_i32_16
+        PUSH, __udon_memcpy_fill_ldl_16
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_ldl_16
+        PUSH, __const_i32_16
+        PUSH, __udon_memcpy_fill_ldr_17
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_ldr_17
+        PUSH, __udon_memcpy_fill_v
+        COPY
+        PUSH, __udon_memcpy_fill_dpa
+        PUSH, __const_i32_11
+        PUSH, __udon_memcpy_fill_wi_18
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wi_18
+        PUSH, __udon_memcpy_fill_wv_19
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_dpa
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wb_21
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wb_21
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wbs_22
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wbs_22
+        PUSH, __const_i32_4
+        PUSH, __udon_memcpy_fill_wal_23
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memcpy_fill_wal_23
+        JUMP_IF_FALSE, __udon_memcpy_fill_ld_6_un
+        JUMP, __udon_memcpy_fill_ld_6_al
+
+    __udon_memcpy_fill_ld_6_al:
+        PUSH, __udon_memcpy_fill_wv_19
+        PUSH, __udon_memcpy_fill_ld_20
+        COPY
+        JUMP, __udon_memcpy_fill_ld_6_j
+
+    __udon_memcpy_fill_ld_6_un:
+        PUSH, __udon_memcpy_fill_wi_18
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_wn_24
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wn_24
+        PUSH, __udon_memcpy_fill_wv_25
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __const_i32_21
+        PUSH, __udon_memcpy_fill_wbs_22
+        PUSH, __udon_memcpy_fill_inv_26
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_19
+        PUSH, __udon_memcpy_fill_wbs_22
+        PUSH, __udon_memcpy_fill_lo_27
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_27
+        PUSH, __udon_memcpy_fill_inv_26
+        PUSH, __udon_memcpy_fill_msk_28
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_msk_28
+        PUSH, __const_i32_27
+        PUSH, __udon_memcpy_fill_nmk_29
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_lo_27
+        PUSH, __udon_memcpy_fill_nmk_29
+        PUSH, __udon_memcpy_fill_lm_30
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_25
+        PUSH, __udon_memcpy_fill_inv_26
+        PUSH, __udon_memcpy_fill_hi_31
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_lm_30
+        PUSH, __udon_memcpy_fill_hi_31
+        PUSH, __udon_memcpy_fill_or_32
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_or_32
+        PUSH, __udon_memcpy_fill_ld_20
+        COPY
+        JUMP, __udon_memcpy_fill_ld_6_j
+
+    __udon_memcpy_fill_ld_6_j:
+        NOP
+
+    __udon_memcpy_fill_ldc_7:
+        PUSH, __udon_memcpy_fill_ld_20
+        PUSH, __const_i32_28
+        PUSH, __udon_memcpy_fill_k_33
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_v
+        PUSH, __const_i32_17
+        PUSH, __udon_memcpy_fill_t_34
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_k_33
+        PUSH, __udon_memcpy_fill_t_34
+        PUSH, __udon_memcpy_fill_m_35
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_dpa
+        PUSH, __const_i32_11
+        PUSH, __udon_memcpy_fill_wi_36
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_dpa
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wb_37
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wb_37
+        PUSH, __const_i32_26
+        PUSH, __udon_memcpy_fill_wbs_38
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wbs_38
+        PUSH, __const_i32_4
+        PUSH, __udon_memcpy_fill_wal_39
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memcpy_fill_wal_39
+        JUMP_IF_FALSE, __udon_memcpy_fill_st_8_un
+        JUMP, __udon_memcpy_fill_st_8_al
+
+    __udon_memcpy_fill_st_8_al:
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wi_36
+        PUSH, __udon_memcpy_fill_m_35
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        JUMP, __udon_memcpy_fill_st_8_j
+
+    __udon_memcpy_fill_st_8_un:
+        PUSH, __udon_memcpy_fill_wi_36
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_wn_40
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_wbs_38
+        PUSH, __udon_memcpy_fill_sh_41
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_sh_41
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_lk_42
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_lk_42
+        PUSH, __const_i32_27
+        PUSH, __udon_memcpy_fill_hk_43
+        EXTERN, "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __const_i32_21
+        PUSH, __udon_memcpy_fill_wbs_38
+        PUSH, __udon_memcpy_fill_inv_44
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wi_36
+        PUSH, __udon_memcpy_fill_wv_45
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_45
+        PUSH, __udon_memcpy_fill_lk_42
+        PUSH, __udon_memcpy_fill_kl_46
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_m_35
+        PUSH, __udon_memcpy_fill_wbs_38
+        PUSH, __udon_memcpy_fill_vl_47
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_kl_46
+        PUSH, __udon_memcpy_fill_vl_47
+        PUSH, __udon_memcpy_fill_nl_48
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wi_36
+        PUSH, __udon_memcpy_fill_nl_48
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wn_40
+        PUSH, __udon_memcpy_fill_wv_49
+        EXTERN, "SystemInt32Array.__Get__SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_wv_49
+        PUSH, __udon_memcpy_fill_hk_43
+        PUSH, __udon_memcpy_fill_kh_50
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_m_35
+        PUSH, __udon_memcpy_fill_inv_44
+        PUSH, __udon_memcpy_fill_vh_51
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_vh_51
+        PUSH, __udon_memcpy_fill_lk_42
+        PUSH, __udon_memcpy_fill_vhm_52
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_kh_50
+        PUSH, __udon_memcpy_fill_vhm_52
+        PUSH, __udon_memcpy_fill_nh_53
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __mem
+        PUSH, __udon_memcpy_fill_wn_40
+        PUSH, __udon_memcpy_fill_nh_53
+        EXTERN, "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid"
+        JUMP, __udon_memcpy_fill_st_8_j
+
+    __udon_memcpy_fill_st_8_j:
+        NOP
+
+    __udon_memcpy_fill_stc_9:
+        PUSH, __udon_memcpy_fill_i
+        PUSH, __const_i32_0
+        PUSH, __udon_memcpy_fill_next
+        EXTERN, "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_memcpy_fill_next
+        PUSH, __udon_memcpy_fill_arg_2
+        PUSH, __udon_memcpy_fill_finished
+        EXTERN, "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean"
+        PUSH, __udon_memcpy_fill_finished
+        JUMP_IF_FALSE, __udon_memcpy_fill_bb30_to___udon_memcpy_fill_bb30
+        JUMP, __udon_memcpy_fill_bb31
+
+    __udon_memcpy_fill_bb30_to___udon_memcpy_fill_bb30:
+        PUSH, __udon_memcpy_fill_next
+        PUSH, __udon_memcpy_fill_i
+        COPY
+        JUMP, __udon_memcpy_fill_bb30
+
+    __udon_bitreverse_i32_body:
+        JUMP, __udon_bitreverse_i32_bb32
+
+    __udon_bitreverse_i32_bb32:
+        PUSH, __udon_bitreverse_i32_arg_0
+        PUSH, __const_i32_9
+        PUSH, __udon_bitreverse_i32_s1a
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s1a
+        PUSH, __const_i32_0
+        PUSH, __udon_bitreverse_i32_s1b
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_arg_0
+        PUSH, __const_i32_0
+        PUSH, __udon_bitreverse_i32_lshr_s_0
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_lshr_s_0
+        PUSH, __const_i32_8
+        PUSH, __udon_bitreverse_i32_s1c
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s1c
+        PUSH, __const_i32_9
+        PUSH, __udon_bitreverse_i32_s1d
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s1b
+        PUSH, __udon_bitreverse_i32_s1d
+        PUSH, __udon_bitreverse_i32_m1
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m1
+        PUSH, __const_i32_10
+        PUSH, __udon_bitreverse_i32_s2a
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s2a
+        PUSH, __const_i32_11
+        PUSH, __udon_bitreverse_i32_s2b
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m1
+        PUSH, __const_i32_11
+        PUSH, __udon_bitreverse_i32_lshr_s_1
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_lshr_s_1
+        PUSH, __const_i32_12
+        PUSH, __udon_bitreverse_i32_s2c
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s2c
+        PUSH, __const_i32_10
+        PUSH, __udon_bitreverse_i32_s2d
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s2b
+        PUSH, __udon_bitreverse_i32_s2d
+        PUSH, __udon_bitreverse_i32_m2
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m2
+        PUSH, __const_i32_14
+        PUSH, __udon_bitreverse_i32_s4a
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s4a
+        PUSH, __const_i32_2
+        PUSH, __udon_bitreverse_i32_s4b
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m2
+        PUSH, __const_i32_2
+        PUSH, __udon_bitreverse_i32_lshr_s_2
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_lshr_s_2
+        PUSH, __const_i32_13
+        PUSH, __udon_bitreverse_i32_s4c
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s4c
+        PUSH, __const_i32_14
+        PUSH, __udon_bitreverse_i32_s4d
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s4b
+        PUSH, __udon_bitreverse_i32_s4d
+        PUSH, __udon_bitreverse_i32_m4
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m4
+        PUSH, __const_i32_30
+        PUSH, __udon_bitreverse_i32_s8a
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s8a
+        PUSH, __const_i32_22
+        PUSH, __udon_bitreverse_i32_s8b
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m4
+        PUSH, __const_i32_22
+        PUSH, __udon_bitreverse_i32_lshr_s_3
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_lshr_s_3
+        PUSH, __const_i32_23
+        PUSH, __udon_bitreverse_i32_s8c
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s8c
+        PUSH, __const_i32_30
+        PUSH, __udon_bitreverse_i32_s8d
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_s8b
+        PUSH, __udon_bitreverse_i32_s8d
+        PUSH, __udon_bitreverse_i32_m8
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m8
+        PUSH, __const_i32_24
+        PUSH, __udon_bitreverse_i32_hi
+        EXTERN, "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_m8
+        PUSH, __const_i32_24
+        PUSH, __udon_bitreverse_i32_lshr_s_4
+        EXTERN, "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_lshr_s_4
+        PUSH, __const_i32_25
+        PUSH, __udon_bitreverse_i32_lo
+        EXTERN, "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_hi
+        PUSH, __udon_bitreverse_i32_lo
+        PUSH, __udon_bitreverse_i32_r
+        EXTERN, "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32"
+        PUSH, __udon_bitreverse_i32_r
+        PUSH, __udon_bitreverse_i32_retval
+        COPY
+        JUMP_INDIRECT, __udon_bitreverse_i32_ret
+
+    __udon_bitreverse_i64_body:
+        JUMP, __udon_bitreverse_i64_bb33
+
+    __udon_bitreverse_i64_bb33:
+        PUSH, __udon_bitreverse_i64_arg_0
+        PUSH, __const_i64_31
+        PUSH, __udon_bitreverse_i64_s1a
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s1a
+        PUSH, __const_i64_32
+        PUSH, __udon_bitreverse_i64_s1b
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_arg_0
+        PUSH, __const_i64_32
+        PUSH, __udon_bitreverse_i64_lshr_s_0
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_0
+        PUSH, __const_i64_33
+        PUSH, __udon_bitreverse_i64_s1c
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s1c
+        PUSH, __const_i64_31
+        PUSH, __udon_bitreverse_i64_s1d
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s1b
+        PUSH, __udon_bitreverse_i64_s1d
+        PUSH, __udon_bitreverse_i64_m1
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m1
+        PUSH, __const_i64_34
+        PUSH, __udon_bitreverse_i64_s2a
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s2a
+        PUSH, __const_i64_35
+        PUSH, __udon_bitreverse_i64_s2b
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m1
+        PUSH, __const_i64_35
+        PUSH, __udon_bitreverse_i64_lshr_s_1
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_1
+        PUSH, __const_i64_36
+        PUSH, __udon_bitreverse_i64_s2c
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s2c
+        PUSH, __const_i64_34
+        PUSH, __udon_bitreverse_i64_s2d
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s2b
+        PUSH, __udon_bitreverse_i64_s2d
+        PUSH, __udon_bitreverse_i64_m2
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m2
+        PUSH, __const_i64_37
+        PUSH, __udon_bitreverse_i64_s4a
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s4a
+        PUSH, __const_i64_38
+        PUSH, __udon_bitreverse_i64_s4b
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m2
+        PUSH, __const_i64_38
+        PUSH, __udon_bitreverse_i64_lshr_s_2
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_2
+        PUSH, __const_i64_39
+        PUSH, __udon_bitreverse_i64_s4c
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s4c
+        PUSH, __const_i64_37
+        PUSH, __udon_bitreverse_i64_s4d
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s4b
+        PUSH, __udon_bitreverse_i64_s4d
+        PUSH, __udon_bitreverse_i64_m4
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m4
+        PUSH, __const_i64_40
+        PUSH, __udon_bitreverse_i64_s8a
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s8a
+        PUSH, __const_i64_41
+        PUSH, __udon_bitreverse_i64_s8b
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m4
+        PUSH, __const_i64_41
+        PUSH, __udon_bitreverse_i64_lshr_s_3
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_3
+        PUSH, __const_i64_42
+        PUSH, __udon_bitreverse_i64_s8c
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s8c
+        PUSH, __const_i64_40
+        PUSH, __udon_bitreverse_i64_s8d
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s8b
+        PUSH, __udon_bitreverse_i64_s8d
+        PUSH, __udon_bitreverse_i64_m8
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m8
+        PUSH, __const_i64_43
+        PUSH, __udon_bitreverse_i64_s16a
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s16a
+        PUSH, __const_i64_44
+        PUSH, __udon_bitreverse_i64_s16b
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m8
+        PUSH, __const_i64_44
+        PUSH, __udon_bitreverse_i64_lshr_s_4
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_4
+        PUSH, __const_i64_45
+        PUSH, __udon_bitreverse_i64_s16c
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s16c
+        PUSH, __const_i64_43
+        PUSH, __udon_bitreverse_i64_s16d
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_s16b
+        PUSH, __udon_bitreverse_i64_s16d
+        PUSH, __udon_bitreverse_i64_m16
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m16
+        PUSH, __const_i64_20
+        PUSH, __udon_bitreverse_i64_hi
+        EXTERN, "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_m16
+        PUSH, __const_i64_20
+        PUSH, __udon_bitreverse_i64_lshr_s_5
+        EXTERN, "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_lshr_s_5
+        PUSH, __const_i64_19
+        PUSH, __udon_bitreverse_i64_lo
+        EXTERN, "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_hi
+        PUSH, __udon_bitreverse_i64_lo
+        PUSH, __udon_bitreverse_i64_r
+        EXTERN, "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64"
+        PUSH, __udon_bitreverse_i64_r
+        PUSH, __udon_bitreverse_i64_retval
+        COPY
+        JUMP_INDIRECT, __udon_bitreverse_i64_ret
+
+    __halt:
+        PUSH, __depth
+        PUSH, __const_i32_0
+        PUSH, __depth
+        EXTERN, "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32"
+        JUMP_INDIRECT, __haltaddr
+
+    __halt_null:
+        PUSH, __const_i32_26
+        PUSH, __halt_reason
+        COPY
+        JUMP, __halt
+.code_end

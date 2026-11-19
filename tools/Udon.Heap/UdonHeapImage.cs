@@ -35,6 +35,13 @@ namespace Udon.Heap
 
         /// <summary>Byte payload for `bytes` (the globals image).</summary>
         public byte[] Bytes;
+
+        /// <summary>
+        /// True when `bytes` should be unpacked into an `int[]` rather than a
+        /// `byte[]`. `__mem` and `__data_image` are word arrays, so their
+        /// payload is a little-endian word stream; everything else is bytes.
+        /// </summary>
+        public bool BytesAreWords;
     }
 
     /// <summary>A parsed `&lt;name&gt;.udonheap.json`.</summary>
@@ -128,6 +135,13 @@ namespace Udon.Heap
                                     slot.Kind = vkey;
                                     slot.Bytes = reader.ReadBase64();
                                     break;
+                                case "wordArray":
+                                    // A modifier on `bytes`, not a payload: the
+                                    // byte stream is a little-endian word stream
+                                    // and must become an `int[]`, because
+                                    // `__mem` and `__data_image` are word arrays.
+                                    slot.BytesAreWords = reader.ReadBool();
+                                    break;
                                 default:
                                     reader.SkipValue();
                                     break;
@@ -179,7 +193,20 @@ namespace Udon.Heap
                         heap.SetHeapVariable(address, slot.Bool, typeof(bool));
                         break;
                     case "bytes":
-                        heap.SetHeapVariable(address, slot.Bytes, typeof(byte[]));
+                        if (slot.BytesAreWords)
+                        {
+                            // The payload is a little-endian word stream; a
+                            // word array is what the slot declares, and a
+                            // byte[] would fail the slot's type check.
+                            int[] words = new int[(slot.Bytes.Length + 3) / 4];
+                            for (int i = 0; i < slot.Bytes.Length; i++)
+                                words[i / 4] |= slot.Bytes[i] << (8 * (i % 4));
+                            heap.SetHeapVariable(address, words, typeof(int[]));
+                        }
+                        else
+                        {
+                            heap.SetHeapVariable(address, slot.Bytes, typeof(byte[]));
+                        }
                         break;
                     default:
                         throw new InvalidOperationException(

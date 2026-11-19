@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UDONWriter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -49,6 +50,110 @@ constexpr uint32_t MemoryPad = 8;
 
 } // namespace
 
+// --- scalar global promotion ------------------------------------------------
+//
+// A scalar global whose address is never taken has no reason to live in
+// `__mem`. In memory every access costs a word-index computation plus an array
+// extern; as a typed heap slot a load is a reference and a store is one COPY.
+// Measured on libsm64: 140 of 1081 globals qualify and cover 1388 sites.
+//
+// The address-taken test is conservative in the right direction: ANY mention
+// of the global other than a bare `load/store ptr @g` marks it taken. That
+// includes `getelementptr @g` (field access), `ptrtoint`, passing it as an
+// argument, and storing it into a pointer -- all of which need the byte
+// address that only `__mem` provides.
+
+/// True when `G` is a scalar type that has a natural Udon slot type.
+///
+/// Pointers are deliberately excluded. A pointer slot and a pointer *value* are
+/// the same `%SystemInt32`, so a promoted pointer global would make
+/// `load ptr @g` and `load i32, ptr %p` indistinguishable at the point of use,
+/// and any later `__mem` read through that value would use a slot name where a
+/// byte offset belongs. Pointers stay in `__mem`, where the address is a real
+/// address.
+static bool isPromotableType(Type *Ty) {
+  return Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+         Ty->isIntegerTy(32) || Ty->isIntegerTy(64) || Ty->isFloatTy() ||
+         Ty->isDoubleTy();
+}
+
+void UDONWriter::classifyGlobals() {
+  for (GlobalVariable &G : Mod->globals()) {
+    if (G.isDeclaration())
+      continue;
+    if (!isPromotableType(G.getValueType()))
+      continue;
+    // The bridge ABI: the host reads and writes these through `__mem` at the
+    // exported offset, so they must stay there.
+    if (G.getName().starts_with("udon_export_"))
+      continue;
+    // `malloc`'s bump pointer and its end are written by the writer itself
+    // through the data image; keeping them in memory keeps that path simple.
+    if (G.getName() == "__udon_heap_ptr" || G.getName() == "__udon_heap_end")
+      continue;
+
+    bool Taken = false;
+    for (const Use &U : G.uses()) {
+      const auto *I = dyn_cast<Instruction>(U.getUser());
+      if (!I) { Taken = true; break; }          // constant or metadata use
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+        if (LI->getPointerOperand() == &G) continue;
+      } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getPointerOperand() == &G) continue;
+      }
+      Taken = true;
+      break;
+    }
+    if (!Taken)
+      PromotedSlots[&G] = {};
+  }
+}
+
+std::string UDONWriter::promotedSlot(const GlobalVariable &G) {
+  auto It = PromotedSlots.find(&G);
+  if (It == PromotedSlots.end())
+    return {};
+  if (!It->second.empty())
+    return It->second;
+  std::string Name = "__gs_" + mangle(G.getName());
+  std::string Ty = udonTypeOf(G.getValueType());
+  if (Ty.empty())
+    reportUDONError("promoted global has no Udon type: " + G.getName());
+  declareSlot(Name, Ty);
+  // A promoted global keeps its initial value. `SystemInt32` is the one type
+  // the assembler can write as a literal, so a 32-bit initializer goes into the
+  // data block and needs no host write; everything else (i64, bool, f32, f64)
+  // goes into the heap image, which the importer applies.
+  auto *Init = G.hasInitializer() ? G.getInitializer() : nullptr;
+  bool Literal = false;
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(Init)) {
+    if (CI->getBitWidth() == 32) {
+      DataLines.push_back("    " + Name + ": %SystemInt32, " +
+                          std::to_string(static_cast<int32_t>(
+                              CI->getValue().getSExtValue())));
+      Literal = true;
+    } else if (CI->getBitWidth() == 64) {
+      HeapEntries.push_back("\"" + Name + "\": {\"type\": \"" + Ty +
+                            "\", \"value\": {\"i64\": " +
+                            std::to_string(static_cast<int64_t>(CI->getValue().getSExtValue())) + "}}");
+    } else if (CI->getBitWidth() == 1) {
+      HeapEntries.push_back("\"" + Name + "\": {\"type\": \"" + Ty +
+                            "\", \"value\": {\"bool\": " +
+                            (CI->isOne() ? "true" : "false") + "}}");
+    }
+  } else if (auto *CF = dyn_cast_or_null<ConstantFP>(Init)) {
+    uint64_t Bits = CF->getValueAPF().bitcastToAPInt().getZExtValue();
+    std::string Key = Ty == "SystemSingle" ? "f32bits" : "f64bits";
+    HeapEntries.push_back("\"" + Name + "\": {\"type\": \"" + Ty +
+                          "\", \"value\": {\"" + Key + "\": " +
+                          std::to_string(Bits) + "}}");
+  }
+  if (!Literal)
+    NullSlots.push_back({Name, Ty});
+  It->second = Name;
+  return Name;
+}
+
 void UDONWriter::layOutGlobals() {
   // Globals start after the reserved region. Their initializer bytes go into a
   // separate `__data_image` array rather than into `__mem` directly: the
@@ -57,6 +162,9 @@ void UDONWriter::layOutGlobals() {
   uint32_t Offset = MemoryReserve;
   for (GlobalVariable &G : Mod->globals()) {
     if (G.isDeclaration())
+      continue;
+    // Promoted globals live in typed heap slots and claim no memory bytes.
+    if (!promotedSlot(G).empty())
       continue;
     if (G.getAddressSpace() != 0)
       reportUDONError("global in a non-default address space: " + G.getName());
@@ -78,29 +186,163 @@ void UDONWriter::layOutGlobals() {
 
   DataImage.assign(Offset > MemoryReserve ? Offset - MemoryReserve : 0, 0);
 
-  // Initializers are copied byte by byte. A global with no initializer stays
-  // zero, which is what `__data_image` already holds.
+  // Initializers are serialized into `__data_image` by walking the constant
+  // tree. Doing it element by element, rather than only handling the shapes a
+  // fixture happened to use, is what lets real C through: a table of structs, an
+  // array of floats and a table of function pointers are all ordinary C and all
+  // appeared in libsm64.
+  //
+  // A global with no initializer stays zero, which `__data_image` already is.
   for (GlobalVariable &G : Mod->globals()) {
     if (G.isDeclaration() || !G.hasInitializer())
       continue;
-    uint32_t Base = GlobalOffsets[&G];
-    if (auto *CDA = dyn_cast<ConstantDataArray>(G.getInitializer())) {
-      if (!CDA->getElementType()->isIntegerTy(8))
-        continue;
-      StringRef Bytes = CDA->getRawDataValues();
-      for (size_t I = 0; I < Bytes.size(); I++)
-        DataImage[Base - MemoryReserve + I] = static_cast<uint8_t>(Bytes[I]);
-    } else if (auto *CI = dyn_cast<ConstantInt>(G.getInitializer())) {
-      uint64_t V = CI->getZExtValue();
-      unsigned Bytes = static_cast<unsigned>(DL->getTypeStoreSize(CI->getType()));
-      for (unsigned I = 0; I < Bytes; I++)
-        DataImage[Base - MemoryReserve + I] = static_cast<uint8_t>(V >> (8 * I));
-    } else if (isa<ConstantAggregateZero>(G.getInitializer())) {
-      // Already zero.
-    } else if (!G.getInitializer()->isNullValue()) {
-      reportUDONError("unsupported global initializer for " + G.getName());
+    // Promoted globals carry their initializer in their heap-image slot.
+    if (!promotedSlot(G).empty())
+      continue;
+    writeConstantBytes(G.getInitializer(), GlobalOffsets[&G]);
+  }
+
+  // `runtime/libc/libc.c` declares these two and leaves them zero, because the
+  // C file cannot know the memory map. Fill them here: the heap starts where
+  // the globals image ends and stops where the shadow stack begins. With
+  // `-udon-heap-bytes=0` both are equal and `malloc` always fails, which is
+  // the correct answer for a program with no heap.
+  for (GlobalVariable &G : Mod->globals()) {
+    StringRef Name = G.getName();
+    uint64_t Value;
+    if (Name == "__udon_heap_ptr")
+      Value = Opts.MemoryBytes;
+    else if (Name == "__udon_heap_end")
+      Value = Opts.MemoryBytes + Opts.HeapBytes;
+    else
+      continue;
+    if (!G.getValueType()->isIntegerTy(32))
+      reportUDONError(Name + " must be i32: the heap bounds are byte offsets");
+    writeConstantBytes(ConstantInt::get(Type::getInt32Ty(Mod->getContext()), Value),
+                       GlobalOffsets[&G]);
+  }
+}
+
+void UDONWriter::writeConstantBytes(const Constant *C, uint32_t Offset) {
+  Type *Ty = C->getType();
+  if (DL->getTypeAllocSize(Ty) == 0)
+    return;
+
+  // Zero, undef and poison all mean "already zero".
+  if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C) ||
+      isa<PoisonValue>(C))
+    return;
+
+  // A packed bytes/ints/floats array: each element is written at its own
+  // stride, which is the store size, not the alloc size.
+  if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+    Type *ElemTy = CDS->getElementType();
+    uint64_t Stride = DL->getTypeAllocSize(ElemTy);
+    for (unsigned I = 0; I < CDS->getNumElements(); I++)
+      writeConstantBytes(CDS->getElementAsConstant(I),
+                         Offset + static_cast<uint32_t>(Stride * I));
+    return;
+  }
+
+  if (auto *CS = dyn_cast<ConstantStruct>(C)) {
+    const StructLayout *SL = DL->getStructLayout(CS->getType());
+    for (unsigned I = 0; I < CS->getNumOperands(); I++)
+      writeConstantBytes(cast<Constant>(CS->getOperand(I)),
+                         Offset + static_cast<uint32_t>(SL->getElementOffset(I)));
+    return;
+  }
+
+  if (auto *CA = dyn_cast<ConstantArray>(C)) {
+    uint64_t Stride = DL->getTypeAllocSize(CA->getType()->getElementType());
+    for (unsigned I = 0; I < CA->getNumOperands(); I++)
+      writeConstantBytes(cast<Constant>(CA->getOperand(I)),
+                         Offset + static_cast<uint32_t>(Stride * I));
+    return;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(C)) {
+    uint64_t Stride = DL->getTypeAllocSize(CV->getType()->getElementType());
+    for (unsigned I = 0; I < CV->getNumOperands(); I++)
+      writeConstantBytes(cast<Constant>(CV->getOperand(I)),
+                         Offset + static_cast<uint32_t>(Stride * I));
+    return;
+  }
+
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    uint64_t V = CI->getZExtValue();
+    unsigned N = static_cast<unsigned>(DL->getTypeStoreSize(CI->getType()));
+    for (unsigned I = 0; I < N; I++)
+      DataImage[Offset - MemoryReserve + I] =
+          static_cast<uint8_t>(V >> (8 * I));
+    return;
+  }
+
+  if (auto *CF = dyn_cast<ConstantFP>(C)) {
+    // Raw bits, so a NaN payload or -0.0 survives byte for byte.
+    uint64_t V = CF->getValueAPF().bitcastToAPInt().getZExtValue();
+    unsigned N = static_cast<unsigned>(DL->getTypeStoreSize(CF->getType()));
+    for (unsigned I = 0; I < N; I++)
+      DataImage[Offset - MemoryReserve + I] =
+          static_cast<uint8_t>(V >> (8 * I));
+    return;
+  }
+
+  // A function used as a value is an index into `__fn_table`, exactly as it is
+  // in `constantSlot`, so a callback table and an indirect call agree. This is
+  // why `collectFunctionPointers` must run before the image is built.
+  //
+  // Checked before the address case because C spells a stored function pointer
+  // either as the function itself or as `ptrtoint (ptr @fn to i32)`.
+  {
+    uint64_t Index = 0;
+    if (constantFunctionIndex(C, Index)) {
+      for (unsigned I = 0; I < 4; I++)
+        DataImage[Offset - MemoryReserve + I] =
+            static_cast<uint8_t>(Index >> (8 * I));
+      return;
     }
   }
+
+  // A pointer or `ptrtoint` initializer is a `__mem` byte offset, and every
+  // global already has its offset, so a table of pointers (a vtable, a jump
+  // table, a callback list) is resolved at compile time.
+  if (Ty->isPointerTy() || Ty->isIntegerTy(32)) {
+    int64_t Addr = 0;
+    if (constantAddress(C, Addr)) {
+      auto V = static_cast<uint64_t>(Addr);
+      for (unsigned I = 0; I < 4; I++)
+        DataImage[Offset - MemoryReserve + I] =
+            static_cast<uint8_t>(V >> (8 * I));
+      return;
+    }
+  }
+
+  std::string Text;
+  raw_string_ostream OS(Text);
+  C->print(OS);
+  reportUDONError("unsupported global initializer element: " + OS.str());
+}
+
+bool UDONWriter::constantFunctionIndex(const Constant *C,
+                                       uint64_t &Out) const {
+  if (auto *Fn = dyn_cast<Function>(C)) {
+    auto It = FunctionPointerIndices.find(Fn);
+    if (It == FunctionPointerIndices.end())
+      return false;
+    Out = It->second;
+    return true;
+  }
+  // A cast or `ptrtoint` does not change which function the value denotes.
+  if (auto *CE = dyn_cast<ConstantExpr>(C))
+    switch (CE->getOpcode()) {
+    case Instruction::PtrToInt:
+    case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
+      return constantFunctionIndex(CE->getOperand(0), Out);
+    default:
+      break;
+    }
+  return false;
 }
 
 void UDONWriter::layOutFrames() {
@@ -133,6 +375,12 @@ void UDONWriter::layOutFrames() {
 }
 
 std::string UDONWriter::pointerOffset(const Value *V, UBlock &B) {
+  // A promoted global's "address" is the slot that holds its value, so a load
+  // or store naming it directly is a reference / a COPY rather than an array
+  // access. Measured on libsm64: 1388 of 13813 memory sites take this path.
+  if (auto *G = dyn_cast<GlobalVariable>(V))
+    if (std::string S = promotedSlot(*G); !S.empty())
+      return S;
   // A pointer is already the byte offset, so this is a slot lookup; a
   // `getelementptr` that survived folding has been lowered into arithmetic by
   // selectGEP and its result slot holds the offset.
@@ -178,6 +426,16 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
   if (Terms.empty()) {
     if (ConstPart == 0) {
       emitCopy(B, BaseSlot, slotFor(&I));
+      return;
+    }
+    // A constant base plus a constant offset is itself a constant byte offset:
+    // emitting the sum as a literal slot lets every access through it fold its
+    // word index and bit offset, which is the difference between one shift
+    // extern per field access and none.
+    if (std::string K = constantByteOffset(BaseSlot); !K.empty()) {
+      uint32_t Sum = static_cast<uint32_t>(std::stoul(K)) +
+                     static_cast<uint32_t>(ConstPart);
+      emitCopy(B, i32Constant(static_cast<int32_t>(Sum)), slotFor(&I));
       return;
     }
     emitExtern(B,
@@ -227,165 +485,483 @@ void UDONWriter::selectAlloca(const AllocaInst &I, UFunction &UF,
              {"__sp", Addend}, slotFor(&I));
 }
 
-std::string UDONWriter::emitLoad(UBlock &B, const std::string &Offset,
-                                 Type *Ty) {
-  std::string Dst = freshSlot("load", Ty);
-  if (Ty->isIntegerTy(32) || Ty->isPointerTy()) {
-    emitExtern(B,
-               "SystemBitConverter.__ToInt32__SystemByteArray_SystemInt32__SystemInt32",
-               {"__mem", Offset}, Dst);
-    return Dst;
+// --- word-array access ------------------------------------------------------
+//
+// `__mem` is a `%SystemInt32Array`, but every address in the IR is a BYTE
+// offset, because a pointer is a byte offset. Two conversions bridge that:
+//
+//   word index = p >> 2
+//   bit offset = (p & 3) * 8
+//
+// A full-word store is one `__Set__` and allocates nothing. A load is a
+// `__Get__` plus shifts; a value that straddles two words is assembled from
+// both, which the identity below verifies:
+//
+//   bit == 0 :  w0
+//   bit != 0 :  ((w0 >>s bit) & ((1 << (32 - bit)) - 1)) | (w1 << (32 - bit))
+//
+// The mask is needed because Udon has no unsigned right shift: `>>` is
+// arithmetic, so the sign bits have to be cleared by hand.
+
+// A byte offset that came from a constant slot: the slot already holds the
+// value, so the caller can fold `>> 2` and `& 3` into literal slots instead of
+// paying an `EXTERN` for each. Returns "" when the offset is a runtime value.
+std::string UDONWriter::constantByteOffset(const std::string &Offset) {
+  auto It = SlotConstants.find(Offset);
+  if (It == SlotConstants.end())
+    return {};
+  return It->second;
+}
+
+std::string UDONWriter::memWordIndex(const std::string &ByteOffset, UBlock &B) {
+  // A constant offset needs no shift: `k >> 2` is a literal index slot. This is
+  // the common case for globals and for struct-field GEPs, which is where the
+  // bulk of libsm64's accesses come from.
+  if (std::string K = constantByteOffset(ByteOffset); !K.empty())
+    return i32Constant(static_cast<int32_t>(
+        static_cast<uint32_t>(std::stoul(K)) >> 2));
+  std::string Index = freshSlot("wi", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(B,
+             "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32",
+             {ByteOffset, i32Constant(2)}, Index);
+  return Index;
+}
+
+std::string UDONWriter::memBitOffset(const std::string &ByteOffset, UBlock &B) {
+  if (std::string K = constantByteOffset(ByteOffset); !K.empty())
+    return i32Constant(static_cast<int32_t>(
+        (static_cast<uint32_t>(std::stoul(K)) & 3u) << 3));
+  std::string Bits = freshSlot("wb", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(B,
+             "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32",
+             {ByteOffset, i32Constant(3)}, Bits);
+  std::string Shifted = freshSlot("wbs", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(B,
+             "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32",
+             {Bits, i32Constant(3)}, Shifted);
+  return Shifted;
+}
+
+std::string UDONWriter::memGetWord(const std::string &WordIndex, UBlock &B) {
+  std::string Word = freshSlot("wv", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(B, "SystemInt32Array.__Get__SystemInt32__SystemInt32",
+             {"__mem", WordIndex}, Word);
+  return Word;
+}
+
+void UDONWriter::memSetWord(const std::string &WordIndex,
+                            const std::string &Value, UBlock &B) {
+  emitExtern(B,
+             "SystemInt32Array.__Set__SystemInt32_SystemInt32__SystemVoid",
+             {"__mem", WordIndex, Value}, "");
+}
+
+std::string UDONWriter::memBinop(StringRef Op, const std::string &A,
+                                 const std::string &Bv, StringRef Hint,
+                                 UBlock &B) {
+  std::string Out = freshSlot(Hint, Type::getInt32Ty(Mod->getContext()));
+  emitExtern(B,
+             ("SystemInt32.__op_" + Op +
+              "__SystemInt32_SystemInt32__SystemInt32").str(),
+             {A, Bv}, Out);
+  return Out;
+}
+
+/// A byte offset into `__mem` is a word index and a bit offset; a store of a
+/// full word is exact only when the bit offset is zero. An unaligned store is a
+/// read-modify-write of both words it touches.
+std::string UDONWriter::memReadUnaligned(const std::string &ByteOffset,
+                                         unsigned &Idx, bool ProvablyAligned) {
+  UBlock &B = Cur->Blocks[Idx];
+  std::string Index = memWordIndex(ByteOffset, B);
+  std::string W0 = memGetWord(Index, B);
+  std::string Out = freshSlot("ld", Type::getInt32Ty(Mod->getContext()));
+
+  // A provably-aligned access (the IR carries `align >= 4`, which the writer
+  // honours for both globals and allocas) IS the word: no bit offset, no
+  // branch, no second word. 73% of libsm64's accesses take this path.
+  if (ProvablyAligned) {
+    emitCopy(B, W0, Out);
+    return Out;
   }
-  if (Ty->isIntegerTy(64)) {
-    emitExtern(B,
-               "SystemBitConverter.__ToInt64__SystemByteArray_SystemInt32__SystemInt64",
-               {"__mem", Offset}, Dst);
-    return Dst;
+
+  std::string Bit = memBitOffset(ByteOffset, B);
+
+  // `bit == 0` takes the fast path: the word *is* the value. Without the branch
+  // the general form would shift by 32, which C# masks to 0.
+  std::string IsAligned =
+      freshSlot("wal", Type::getInt1Ty(Mod->getContext()));
+  emitExtern(B,
+             "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean",
+             {Bit, i32Constant(0)}, IsAligned);
+
+  std::string Base = freshLabelStem("ld");
+  std::string TrueLabel = Base + "_al";
+  std::string FalseLabel = Base + "_un";
+  std::string JoinLabel = Base + "_j";
+
+  B.Insts.push_back({UInst::PUSH, IsAligned});
+  B.Insts.push_back({UInst::JUMP_IF_FALSE, FalseLabel});
+  B.Insts.push_back({UInst::JUMP, TrueLabel});
+
+  unsigned T = appendBlock(*Cur, TrueLabel);
+  emitCopy(Cur->Blocks[T], W0, Out);
+  Cur->Blocks[T].Insts.push_back({UInst::JUMP, JoinLabel});
+
+  unsigned F = appendBlock(*Cur, FalseLabel);
+  UBlock &FB = Cur->Blocks[F];
+  std::string NextIndex =
+      memBinop("Addition", Index, i32Constant(1), "wn", FB);
+  std::string W1 = memGetWord(NextIndex, FB);
+  std::string InvBits =
+      memBinop("Subtraction", i32Constant(32), Bit, "inv", FB);
+  // Low half: arithmetic shift right, then mask to the bits that survived.
+  std::string Low = memBinop("RightShift", W0, Bit, "lo", FB);
+  std::string Mask = memBinop("LeftShift", i32Constant(-1), InvBits, "msk", FB);
+  // `~x` is `x ^ -1`: Udon exposes no bitwise NOT operator on any type, so the
+  // complement has to be spelled as an XOR with all ones.
+  std::string NotMask =
+      freshSlot("nmk", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(FB,
+             "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32",
+             {Mask, i32Constant(-1)}, NotMask);
+  std::string LowMasked = memBinop("LogicalAnd", Low, NotMask, "lm", FB);
+  // High half: the next word's low bits, moved into place.
+  std::string High = memBinop("LeftShift", W1, InvBits, "hi", FB);
+  std::string Combined = memBinop("LogicalOr", LowMasked, High, "or", FB);
+  emitCopy(FB, Combined, Out);
+  FB.Insts.push_back({UInst::JUMP, JoinLabel});
+
+  // The join is a jump *target*, so it must not also be the block the caller
+  // continues filling: that would put the caller's instructions after the
+  // branch that reaches it. Append the join, then a separate continuation.
+  unsigned JoinIdx = appendBlock(*Cur, JoinLabel);
+  Cur->Blocks[JoinIdx].Insts.push_back({UInst::NOP, {}});
+  Idx = appendBlock(*Cur, freshLabelStem("ldc"));
+  return Out;
+}
+
+/// Store a full word at BYTE offset `ByteOffset`. Aligned is one `__Set__`;
+/// unaligned is a read-modify-write of the two words it spans.
+void UDONWriter::memWriteUnaligned(const std::string &ByteOffset,
+                                   const std::string &Value, unsigned &Idx,
+                                   bool ProvablyAligned) {
+  UBlock &B = Cur->Blocks[Idx];
+  std::string Index = memWordIndex(ByteOffset, B);
+
+  // Aligned: the word is exactly the value -- one `__Set__`, no diamond.
+  if (ProvablyAligned) {
+    memSetWord(Index, Value, B);
+    return;
   }
+
+  std::string Bit = memBitOffset(ByteOffset, B);
+
+  std::string IsAligned =
+      freshSlot("wal", Type::getInt1Ty(Mod->getContext()));
+  emitExtern(B,
+             "SystemInt32.__op_Equality__SystemInt32_SystemInt32__SystemBoolean",
+             {Bit, i32Constant(0)}, IsAligned);
+
+  std::string Base = freshLabelStem("st");
+  std::string TrueLabel = Base + "_al";
+  std::string FalseLabel = Base + "_un";
+  std::string JoinLabel = Base + "_j";
+
+  B.Insts.push_back({UInst::PUSH, IsAligned});
+  B.Insts.push_back({UInst::JUMP_IF_FALSE, FalseLabel});
+  B.Insts.push_back({UInst::JUMP, TrueLabel});
+
+  unsigned T = appendBlock(*Cur, TrueLabel);
+  memSetWord(Index, Value, Cur->Blocks[T]);
+  Cur->Blocks[T].Insts.push_back({UInst::JUMP, JoinLabel});
+
+  unsigned F = appendBlock(*Cur, FalseLabel);
+  UBlock &FB = Cur->Blocks[F];
+  std::string NextIndex =
+      memBinop("Addition", Index, i32Constant(1), "wn", FB);
+  // A 32-bit value at bit offset `b` spans two words. The `b` bits BELOW the
+  // insertion point in the low word, and everything from `b` up in the high
+  // word, are kept; the 32 bits starting at `b` are replaced.
+  //
+  //   lowKeep  = (1 << b) - 1
+  //   W0' = (W0 & lowKeep)  | (Value << b)
+  //   W1' = (W1 & ~lowKeep) | ((Value >>> (32 - b)) & lowKeep)
+  //
+  // The high insert is masked with `lowKeep` because `Value >>> (32 - b)` is an
+  // ARITHMETIC shift: its top bits are copies of the sign bit and would
+  // corrupt the kept region if ORed in raw.
+  std::string One = i32Constant(1);
+  std::string Shifted = memBinop("LeftShift", One, Bit, "sh", FB);
+  std::string LowKeep = memBinop("Subtraction", Shifted, One, "lk", FB);
+  std::string HighKeep = freshSlot("hk", Type::getInt32Ty(Mod->getContext()));
+  emitExtern(FB,
+             "SystemInt32.__op_LogicalXor__SystemInt32_SystemInt32__SystemInt32",
+             {LowKeep, i32Constant(-1)}, HighKeep);
+  std::string InvBits =
+      memBinop("Subtraction", i32Constant(32), Bit, "inv", FB);
+
+  // Low word.
+  std::string W0 = memGetWord(Index, FB);
+  std::string KeptLow = memBinop("LogicalAnd", W0, LowKeep, "kl", FB);
+  std::string ValLow = memBinop("LeftShift", Value, Bit, "vl", FB);
+  std::string NewLow = memBinop("LogicalOr", KeptLow, ValLow, "nl", FB);
+  memSetWord(Index, NewLow, FB);
+
+  // High word.
+  std::string W1 = memGetWord(NextIndex, FB);
+  std::string KeptHigh = memBinop("LogicalAnd", W1, HighKeep, "kh", FB);
+  std::string ValHighRaw = memBinop("RightShift", Value, InvBits, "vh", FB);
+  std::string ValHigh = memBinop("LogicalAnd", ValHighRaw, LowKeep, "vhm", FB);
+  std::string NewHigh = memBinop("LogicalOr", KeptHigh, ValHigh, "nh", FB);
+  memSetWord(NextIndex, NewHigh, FB);
+  FB.Insts.push_back({UInst::JUMP, JoinLabel});
+
+  unsigned JoinIdx = appendBlock(*Cur, JoinLabel);
+  Cur->Blocks[JoinIdx].Insts.push_back({UInst::NOP, {}});
+  Idx = appendBlock(*Cur, freshLabelStem("stc"));
+}
+
+std::string UDONWriter::emitLoad(unsigned &Idx, const std::string &Offset,
+                                 Type *Ty, unsigned Align) {
+  // `Idx` moves when a word read splits the block to handle an unaligned
+  // offset, so the current block is fetched through this helper at each use.
+  // A `UBlock &` would NOT work: assigning to it copies the block instead of
+  // rebinding, silently overwriting one block with another.
+  auto cur = [&]() -> UBlock & { return Cur->Blocks[Idx]; };
+
+  // Aligned when the IR's own guarantee covers the access width. `Align == 0`
+  // (no attribute) stays on the general path.
+  unsigned Width =
+      static_cast<unsigned>(DL->getTypeStoreSize(Ty));
+  bool Aligned = Align >= Width && Align >= 4;
+
+  // A word read is exact for i32 and, through the reinterpret externs, for
+  // float. i64 and double need two words assembled.
+  if (Ty->isIntegerTy(32) || Ty->isPointerTy())
+    return memReadUnaligned(Offset, Idx, Aligned);
+
+  if (Ty->isIntegerTy(64) || Ty->isDoubleTy()) {
+    // Low word, then the high word at byte offset + 4. The second word is
+    // always 4 bytes past a 8-aligned base, so it inherits the proof.
+    std::string Lo = memReadUnaligned(Offset, Idx, Aligned);
+    std::string Four = memBinop("Addition", Offset, i32Constant(4), "p4", cur());
+    std::string Hi = memReadUnaligned(Four, Idx, Aligned);
+    Type *I64 = Type::getInt64Ty(Mod->getContext());
+    std::string Lo64 = freshSlot("lo64", I64);
+    emitExtern(cur(), "SystemConvert.__ToInt64__SystemInt32__SystemInt64", {Lo},
+               Lo64);
+    std::string Masked = freshSlot("lo64m", I64);
+    emitExtern(cur(),
+               "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64",
+               {Lo64, constantSlot(ConstantInt::get(I64, 0xFFFFFFFFull))},
+               Masked);
+    std::string Hi64 = freshSlot("hi64", I64);
+    emitExtern(cur(), "SystemConvert.__ToInt64__SystemInt32__SystemInt64", {Hi},
+               Hi64);
+    std::string Shifted = freshSlot("hi64s", I64);
+    emitExtern(cur(),
+               "SystemInt64.__op_LeftShift__SystemInt64_SystemInt64__SystemInt64",
+               {Hi64, constantSlot(ConstantInt::get(I64, 32))}, Shifted);
+    std::string Joined = freshSlot("j64", I64);
+    emitExtern(cur(),
+               "SystemInt64.__op_LogicalOr__SystemInt64_SystemInt64__SystemInt64",
+               {Masked, Shifted}, Joined);
+
+    if (Ty->isIntegerTy(64))
+      return Joined;
+
+    // double: reinterpret the assembled bits.
+    std::string Out = freshSlot("ld", Ty);
+    emitExtern(cur(),
+               "SystemBitConverter.__Int64BitsToDouble__SystemInt64__SystemDouble",
+               {Joined}, Out);
+    return Out;
+  }
+
   if (Ty->isFloatTy()) {
-    emitExtern(B,
-               "SystemBitConverter.__ToSingle__SystemByteArray_SystemInt32__SystemSingle",
-               {"__mem", Offset}, Dst);
-    return Dst;
+    std::string Bits = memReadUnaligned(Offset, Idx, Aligned);
+    std::string Out = freshSlot("ld", Ty);
+    emitExtern(cur(),
+               "SystemBitConverter.__Int32BitsToSingle__SystemInt32__SystemSingle",
+               {Bits}, Out);
+    return Out;
   }
-  if (Ty->isDoubleTy()) {
-    emitExtern(B,
-               "SystemBitConverter.__ToDouble__SystemByteArray_SystemInt32__SystemDouble",
-               {"__mem", Offset}, Dst);
-    return Dst;
-  }
-  if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16)) {
-    // A padded 32-bit window read, then mask. The 8 pad bytes at the end of
-    // `__mem` are what make the window always in bounds.
-    std::string Word = freshSlot("load_w", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemBitConverter.__ToInt32__SystemByteArray_SystemInt32__SystemInt32",
-               {"__mem", Offset}, Word);
-    std::string Mask =
-        i32Constant(Ty->isIntegerTy(8) ? 0xFF : 0xFFFF);
-    std::string Narrow = freshSlot("load_n", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32",
-               {Word, Mask}, Narrow);
-    // Sign-extend from the narrow width: (x << (32 - w)) >> (32 - w).
-    if (Ty->isIntegerTy(8)) {
-      std::string Shifted = freshSlot("load_se", Narrow.empty()
-                                                   ? Type::getInt32Ty(Mod->getContext())
-                                                   : Type::getInt32Ty(Mod->getContext()));
-      emitExtern(B,
-                 "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32",
-                 {Narrow, i32Constant(24)}, Shifted);
-      std::string Result = freshSlot("load_se2", Type::getInt32Ty(Mod->getContext()));
-      emitExtern(B,
-                 "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32",
-                 {Shifted, i32Constant(24)}, Result);
-      emitCopy(B, Result, Dst);
-    } else {
-      std::string Shifted = freshSlot("load_se", Type::getInt32Ty(Mod->getContext()));
-      emitExtern(B,
-                 "SystemInt32.__op_LeftShift__SystemInt32_SystemInt32__SystemInt32",
-                 {Narrow, i32Constant(16)}, Shifted);
-      std::string Result = freshSlot("load_se2", Type::getInt32Ty(Mod->getContext()));
-      emitExtern(B,
-                 "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32",
-                 {Shifted, i32Constant(16)}, Result);
-      emitCopy(B, Result, Dst);
-    }
-    return Dst;
-  }
-  reportUDONError("load of an unsupported type");
-}
 
-void UDONWriter::emitStore(UBlock &B, const std::string &Value,
-                           const std::string &Offset, Type *Ty) {
-  if (Ty->isIntegerTy(32) || Ty->isPointerTy() || Ty->isIntegerTy(64) ||
-      Ty->isFloatTy() || Ty->isDoubleTy()) {
-    // GetBytes returns a fresh array into a scratch slot, then __CopyTo__
-    // writes it into `__mem` at the offset. One small allocation per store.
+  if (Ty->isIntegerTy(1)) {
+    // A bool occupies one byte holding 0 or 1. Read the byte, then convert:
+    // the destination slot is a `SystemBoolean`, and copying an int into it
+    // would be a slot type mismatch.
+    std::string Bits =
+        emitLoad(Idx, Offset, Type::getInt8Ty(Mod->getContext()), Align);
+    std::string Out = freshSlot("ldi1", Ty);
+    emitExtern(cur(), "SystemConvert.__ToBoolean__SystemInt32__SystemBoolean",
+               {Bits}, Out);
+    return Out;
+  }
+
+  if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16)) {
+    // Sign-extend by moving the field's sign bit to bit 31 and back down.
     //
-    // Measured alternatives, all worse:
-    //   Convert.__ToByte__SystemInt32 -> aborts in the VM, even in range
-    //   SystemArray.__SetValue__(object, i32) -> type check rejects the box
-    //   Int32Array.__Set__(i, v) -> works and allocates nothing, but
-    //     BitConverter.To* rejects an Int32Array, so every load would need
-    //     manual shifts; that is a different memory model, not a local change
-    // wasm2usharp makes the same choice: BitConverter.GetBytes(v).CopyTo(mem, i).
-    StringRef SrcType;
-    if (Ty->isIntegerTy(32) || Ty->isPointerTy()) SrcType = "SystemInt32";
-    else if (Ty->isIntegerTy(64)) SrcType = "SystemInt64";
-    else if (Ty->isFloatTy()) SrcType = "SystemSingle";
-    else SrcType = "SystemDouble";
+    // The mask that used to precede the left shift is redundant: `(x << 24)`,
+    // where Udon's `<<` is a 32-bit operation, already discards every bit
+    // above the low byte, so `(x & 0xFF) << 24 >> 24` and `x << 24 >> 24`
+    // produce the same value for ANY x. One extern fewer per sub-word load.
+    //
+    // Reading at the *byte* offset (not the containing word) is what makes a
+    // field that straddles two words correct: the left shift brings the
+    // Reading at the *byte* offset (not the containing word) is what makes a
+    // field that straddles two words correct. Verified by `test/subword.ll`,
+    // which covers a byte at offset 3 of a word.
+    unsigned Width = Ty->getIntegerBitWidth();
+    int32_t Shift = Width == 8 ? 24 : 16;
 
-    std::string Bytes = scratchByteArray();
-    emitExtern(B, ("SystemBitConverter.__GetBytes__" + SrcType +
-                   "__SystemByteArray").str(),
-               {Value}, Bytes);
-    emitExtern(B,
-               "SystemByteArray.__CopyTo__SystemArray_SystemInt32__SystemVoid",
-               {Bytes, "__mem", Offset}, "");
+    // A sub-word access reads the containing word at its own byte offset.
+    //
+    // A word cache was tried here: track `base + delta` for pointer slots,
+    // reuse a word another access in the block already read, and shift the
+    // field out. It is NOT sound as written and was reverted. `memReadUnaligned`
+    // at an unaligned byte offset already returns the field's bits positioned
+    // at the bottom of the result, so an extra shift by `delta & 3` corrupts
+    // it; and reading `base + (delta & ~3)` is only word-aligned when `base`
+    // is, which is not known here. Measured failure: `report` returned
+    // 2500000 instead of 2482752, i.e. the whole display list went wrong.
+    // Doing this correctly needs the read to happen at a genuinely aligned
+    // address and the field's in-word position to come from that address, not
+    // from a delta relative to an arbitrary base.
+    std::string Word = memReadUnaligned(Offset, Idx, Align >= Width && Width >= 2);
+
+    std::string Left =
+        memBinop("LeftShift", Word, i32Constant(Shift), "ldl", cur());
+    return memBinop("RightShift", Left, i32Constant(Shift), "ldr", cur());
+  }
+
+  std::string TyText;
+  raw_string_ostream TyOS(TyText);
+  Ty->print(TyOS);
+  reportUDONError("load of an unsupported type: " + TyOS.str());
+}
+
+void UDONWriter::emitStore(unsigned &Idx, const std::string &Value,
+                           const std::string &Offset, Type *Ty,
+                           unsigned Align) {
+  // Refetched at each use: a word write may split the block, which moves the
+  // continuation. Assigning to a `UBlock &` would copy a block, not rebind.
+  auto cur = [&]() -> UBlock & { return Cur->Blocks[Idx]; };
+
+  unsigned Width = static_cast<unsigned>(DL->getTypeStoreSize(Ty));
+  bool Aligned = Align >= Width && Align >= 4;
+
+  if (Ty->isIntegerTy(32) || Ty->isPointerTy()) {
+    memWriteUnaligned(Offset, Value, Idx, Aligned);
+    return;
+  }
+
+  if (Ty->isIntegerTy(64) || Ty->isDoubleTy()) {
+    Type *I64 = Type::getInt64Ty(Mod->getContext());
+    std::string Bits = Value;
+    if (Ty->isDoubleTy()) {
+      Bits = freshSlot("st_bits", I64);
+      emitExtern(cur(),
+                 "SystemBitConverter.__DoubleToInt64Bits__SystemDouble__SystemInt64",
+                 {Value}, Bits);
+    }
+    std::string Lo64 = freshSlot("st_lo", I64);
+    emitExtern(cur(),
+               "SystemInt64.__op_LogicalAnd__SystemInt64_SystemInt64__SystemInt64",
+               {Bits, constantSlot(ConstantInt::get(I64, 0xFFFFFFFFull))}, Lo64);
+    std::string Lo = emitTruncI64ToI32(Lo64, cur());
+    std::string Hi64 = freshSlot("st_hi", I64);
+    emitExtern(cur(),
+               "SystemInt64.__op_RightShift__SystemInt64_SystemInt64__SystemInt64",
+               {Bits, constantSlot(ConstantInt::get(I64, 32))}, Hi64);
+    std::string Hi = emitTruncI64ToI32(Hi64, cur());
+
+    memWriteUnaligned(Offset, Lo, Idx, Aligned);
+    std::string Four =
+        memBinop("Addition", Offset, i32Constant(4), "p4", cur());
+    memWriteUnaligned(Four, Hi, Idx, Aligned);
+    return;
+  }
+
+  if (Ty->isFloatTy()) {
+    std::string Bits =
+        freshSlot("st_bits", Type::getInt32Ty(Mod->getContext()));
+    emitExtern(cur(),
+               "SystemBitConverter.__SingleToInt32Bits__SystemSingle__SystemInt32",
+               {Value}, Bits);
+    memWriteUnaligned(Offset, Bits, Idx, Aligned);
+    return;
+  }
+
+  if (Ty->isIntegerTy(1)) {
+    // Store the bool as the one byte a bool occupies: convert to an int and
+    // take the byte path, which merges the byte into the surrounding word.
+    std::string AsInt =
+        freshSlot("sti1", Type::getInt32Ty(Mod->getContext()));
+    emitExtern(cur(), "SystemConvert.__ToInt32__SystemBoolean__SystemInt32",
+               {Value}, AsInt);
+    emitStore(Idx, AsInt, Offset, Type::getInt8Ty(Mod->getContext()), 1);
     return;
   }
 
   if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16)) {
-    // Read-modify-write on the little-endian 32-bit window at the offset: the
-    // target byte is at shift 0, so a byte store is
-    // (w & 0xFFFFFF00) | (v & 0xFF), and a 16-bit store uses 0xFFFF.
-    std::string Word = freshSlot("st_w", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemBitConverter.__ToInt32__SystemByteArray_SystemInt32__SystemInt32",
-               {"__mem", Offset}, Word);
-
-    uint32_t Keep = Ty->isIntegerTy(8) ? 0xFFFFFF00u : 0xFFFF0000u;
-    uint32_t Take = Ty->isIntegerTy(8) ? 0xFFu : 0xFFFFu;
-
-    std::string Kept = freshSlot("st_keep", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32",
-               {Word, i32Constant(static_cast<int32_t>(Keep))}, Kept);
-    std::string Taken = freshSlot("st_take", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemInt32.__op_LogicalAnd__SystemInt32_SystemInt32__SystemInt32",
-               {Value, i32Constant(static_cast<int32_t>(Take))}, Taken);
-    std::string Merged = freshSlot("st_merge", Type::getInt32Ty(Mod->getContext()));
-    emitExtern(B,
-               "SystemInt32.__op_LogicalOr__SystemInt32_SystemInt32__SystemInt32",
-               {Kept, Taken}, Merged);
-
-    std::string Bytes = scratchByteArray();
-    emitExtern(B, "SystemBitConverter.__GetBytes__SystemInt32__SystemByteArray",
-               {Merged}, Bytes);
-    emitExtern(B,
-               "SystemByteArray.__CopyTo__SystemArray_SystemInt32__SystemVoid",
-               {Bytes, "__mem", Offset}, "");
+    // Read the four bytes starting at `Offset`, replace the low one or two,
+    // and write them back. Working at the *byte* offset rather than on the
+    // containing word is what makes a field that straddles two words correct:
+    // an i16 at byte offset 3 spans bytes 3..4, which are in different words,
+    // and a single-word mask cannot reach both.
+    unsigned Width = Ty->getIntegerBitWidth();
+    uint32_t Take = Width == 8 ? 0xFFu : 0xFFFFu;
+    uint32_t Keep = ~Take;
+    std::string Old = memReadUnaligned(Offset, Idx, Align >= Width && Width >= 2);
+    std::string Kept = memBinop("LogicalAnd", Old,
+                                i32Constant(static_cast<int32_t>(Keep)), "k",
+                                cur());
+    std::string Taken =
+        memBinop("LogicalAnd", Value, i32Constant(static_cast<int32_t>(Take)),
+                 "t", cur());
+    std::string Merged = memBinop("LogicalOr", Kept, Taken, "m", cur());
+    memWriteUnaligned(Offset, Merged, Idx, Align >= Width && Width >= 2);
     return;
   }
 
-  reportUDONError("store of an unsupported type");
-}
-
-std::string UDONWriter::scratchByteArray() {
-  // One scratch slot per function, reused by every store: the array is written
-  // and consumed within one instruction's expansion, so a second store can
-  // safely overwrite it.
-  if (ScratchBytes.empty()) {
-    ScratchBytes = mangle(Cur->F->getName()) + "_store_bytes";
-    declareSlot(ScratchBytes, "SystemByteArray");
-    NullSlots.push_back({ScratchBytes, "SystemByteArray"});
-  }
-  return ScratchBytes;
+  std::string TyText;
+  raw_string_ostream TyOS(TyText);
+  Ty->print(TyOS);
+  reportUDONError("store of an unsupported type: " + TyOS.str());
 }
 
 void UDONWriter::selectLoad(const LoadInst &I, UFunction &UF,
                            unsigned &Idx) {
   UBlock &B = UF.Blocks[Idx];
+  // A promoted global's slot IS the value: no memory access at all. Both slots
+  // come from the same LLVM type, so this is a plain copy -- and the slot
+  // allocator usually coalesces it away entirely.
+  if (auto *G = dyn_cast<GlobalVariable>(I.getPointerOperand()))
+    if (std::string S = promotedSlot(*G); !S.empty()) {
+      emitCopy(B, S, slotFor(&I));
+      return;
+    }
   std::string Offset = pointerOffset(I.getPointerOperand(), B);
-  emitCopy(B, emitLoad(B, Offset, I.getType()), slotFor(&I));
+  std::string Value = emitLoad(Idx, Offset, I.getType(), I.getAlign().value());
+  emitCopy(UF.Blocks[Idx], Value, slotFor(&I));
+  // A narrow load's result is already sign-extended. Record the slot the load
+  // NAMES (`slotFor(&I)`), not `emitLoad`'s temporary: the copy above is what
+  // defines it, and that slot is what a later `sitofp` reads.
+  if (I.getType()->isIntegerTy(8) || I.getType()->isIntegerTy(16))
+    SignExtendedSlots.insert(slotFor(&I));
 }
 
 void UDONWriter::selectStore(const StoreInst &I, UFunction &UF,
                             unsigned &Idx) {
   UBlock &B = UF.Blocks[Idx];
+  if (auto *G = dyn_cast<GlobalVariable>(I.getPointerOperand()))
+    if (std::string S = promotedSlot(*G); !S.empty()) {
+      emitCopy(B, slotFor(I.getValueOperand()), S);
+      return;
+    }
   std::string Offset = pointerOffset(I.getPointerOperand(), B);
-  emitStore(B, slotFor(I.getValueOperand()), Offset,
-            I.getValueOperand()->getType());
+  emitStore(Idx, slotFor(I.getValueOperand()), Offset,
+            I.getValueOperand()->getType(), I.getAlign().value());
 }

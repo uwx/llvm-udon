@@ -324,7 +324,7 @@ python -m pip install lit
 lit build/test
 ```
 
-19 fixtures, each asserting exact values with `FileCheck`:
+21 fixtures, each asserting exact values with `FileCheck`:
 
 | Fixture | Covers |
 |---|---|
@@ -357,6 +357,69 @@ udon-vm run sum.uasm --heap-json sum.udonheap.json --entry _start
 
 prints `ret _start = 9` (`3+1+4+1`). `sum.rs` is `#![no_std]` with a raw-pointer
 loop, so it emits zero externs and no panic path.
+
+The largest acceptance program is libsm64 -- a Super Mario 64 port written for a
+hosted target and never adjusted for this one. It is far past what a fixture can
+cover: 58 translation units, 838 KB of IR, structs, unions, function-pointer
+tables, variadic calls, a heap, and every intrinsic shape a C frontend emits.
+
+```
+scripts/build-libsm64.sh <libsm64-src> test/Inputs/libsm64-driver.c
+```
+
+prints `ret _start = 50536`. That is a checksum the driver computes after
+`sm64_global_init` has loaded Mario's textures and animations into a 4 MiB
+heap buffer, and after `sm64_mario_create` has run the whole spawn path: 505 for
+the byte sum of the texture buffer, 36 for the bytes that were actually
+written. `-1` there means no collision data was found, which is the correct
+answer with no level loaded -- so the driver asserts that value rather than
+ticking a Mario that has no floor.
+
+The generated program is 173 MB of UASM over 489 000 slots, and the real
+`VRC.Udon.UAssembly` assembler accepts all of it in about 8 seconds
+(`udon-vm assemble <uasm> --heap-slots <n>`). It also assembles and runs inside
+the Unity editor, through `Assets/Udon/Editor/UdonProgramImporter.cs`, and
+returns the same checksum in ClientSim.
+
+The on-screen end-to-end is `test/Inputs/mario-playground.c`: a real game loop
+in miniature. It compiles a floor and walls as `SM64Surface` triangles, spawns
+Mario, and exports the bridge a Unity host reads and writes:
+
+```
+udon_export_ud_input     float[8]      stick + buttons (host -> C)
+udon_export_ud_state     float[16]     position, face angle, velocity (C -> host)
+udon_export_ud_geo_count uint32        triangles used (C -> host)
+udon_export_ud_geo       float[33*1024] per-triangle pos/normal/color/uv (C -> host)
+```
+
+Build it with `build/libsm64/playground-build.sh` (the same 58 translation
+units plus the driver), then `udon-vm run playground.uasm --entry _start
+--entry report` proves input in and state + a 752-triangle mesh out:
+`ret report = 2500752` is the triangle count and Mario's position after 30
+forward ticks. The script compiles at `-Os` (override with `UDON_OPT`): versus
+`-O2` that cuts the emitted program from 174 MB / 3.16M instructions to
+143 MB / 2.65M instructions -- a 16% smaller interpreter loop -- with the same
+results. `-Oz` does not work: it exposes an unresolved `_stat64i32` from the
+CRT surface libsm64's audio loader reaches. In the editor, `Assets/Udon/Runtime/MarioPlayground.cs` drives
+the same program: it writes `ud_input`, sends the `tick` event at 30 Hz, reads
+`ud_state` and the geometry buffer back out of `__mem`, and renders Mario with
+a vertex-color shader -- the scene is
+`Assets/Scenes/LlvmUdonPlayground.unity`.
+
+The bridge is `-udon-export-memory` plus the `udon_export_` prefix. The writer
+exports `__mem` itself and, for every `udon_export_<name>` global, a
+`%SystemInt32` slot holding the global's byte offset; the host reads and writes
+through `__mem` at that offset. No ROM is bundled: the texture atlas is left
+zeroed and a minimal one-animation table is assembled at the offset the
+animation loader reads, so the animated-part geometry stays on real data
+instead of indexing `values[-1]`.
+
+The driver also reserves `udon_export_ud_rom` (8 MiB, the size libsm64's
+offsets assume) and takes a ROM through it: the Unity host copies the user's
+`.z64` into `__mem` at that window before `_start` and the driver passes the
+pointer to `sm64_global_init`, so a real ROM lights the textures and animations
+up. The ROM itself is never distributed -- the repo ships the window and the
+byte-exact copy, not the data.
 
 ## Known limitations
 

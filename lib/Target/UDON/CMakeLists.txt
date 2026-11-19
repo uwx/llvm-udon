@@ -10,6 +10,9 @@ add_subdirectory(TargetInfo)
 # Grows as the lowering lands: the memory, call, runtime, call-graph, slot
 # allocation and extern-table units are added by the steps that implement them.
 set(UDON_WRITER_SOURCES
+  UDONInliner.cpp
+  UDONProtectFPConv.cpp
+  UDONLowerOverflow.cpp
   UDONWriter.cpp
   UDONWriterSelect.cpp
   UDONWriterMemory.cpp

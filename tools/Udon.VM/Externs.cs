@@ -542,6 +542,19 @@ namespace Udon.VM
                     h.GetHeapVariable<byte[]>(s[0])
                      .CopyTo(h.GetHeapVariable<byte[]>(s[1]), I32(h, s[2])));
 
+            // The word-array variants. Init copies the globals image into
+            // `__mem` with this one, so both sides are `int[]`; without it the
+            // SDK registry lists the extern but no stub exists and the VM
+            // reports `NotSupportedException` mid-init.
+            r.Add("SystemInt32Array.__CopyTo__SystemArray_SystemInt32__SystemVoid", 3,
+                (IUdonHeap h, Span<uint> s) =>
+                    h.GetHeapVariable<int[]>(s[0])
+                     .CopyTo(h.GetHeapVariable<int[]>(s[1]), I32(h, s[2])));
+            r.Add("SystemUInt32Array.__CopyTo__SystemArray_SystemInt32__SystemVoid", 3,
+                (IUdonHeap h, Span<uint> s) =>
+                    h.GetHeapVariable<uint[]>(s[0])
+                     .CopyTo(h.GetHeapVariable<uint[]>(s[1]), I32(h, s[2])));
+
             // The 5-arity forms memcpy/memmove/memset lower to.
             r.Add("SystemArray.__Copy__SystemArray_SystemInt32_SystemArray_SystemInt32_SystemInt32__SystemVoid", 5,
                 (IUdonHeap h, Span<uint> s) =>

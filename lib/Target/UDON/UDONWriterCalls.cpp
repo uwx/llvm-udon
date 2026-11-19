@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UDONWriter.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -75,9 +76,25 @@ unsigned UDONWriter::selectDirectCall(unsigned Idx, const Function *Callee,
   // callee's return slot, then a jump to the body. Copying in the callee is
   // what keeps a nested or sibling call correct: the callee's state lives in
   // slots no other function writes.
-  for (unsigned A = 0; A < Args.size(); A++)
-    emitCopy(B, Args[A], mangle(Callee->getName()) + "_arg_" +
-                             std::to_string(A));
+  // A variadic callee declares fewer parameters than a call passes. The extra
+  // arguments still need a home, because the copy below writes one slot per
+  // argument; the callee simply never reads them. Declaring on demand is what
+  // makes a variadic call (sprintf, printf) lower at all -- and a stub that
+  // ignores its variadic tail needs nothing further.
+  for (unsigned A = 0; A < Args.size(); A++) {
+    std::string Slot =
+        mangle(Callee->getName()) + "_arg_" + std::to_string(A);
+    if (!SlotTypes.count(Slot)) {
+      auto It = SlotTypes.find(Args[A]);
+      std::string Ty = It == SlotTypes.end() ? std::string() : It->second;
+      if (Ty.empty())
+        reportUDONError("cannot type argument " + std::to_string(A) +
+                        " of a call to " + Callee->getName());
+      declareSlot(Slot, Ty);
+      NullSlots.push_back({Slot, Ty});
+    }
+    emitCopy(B, Args[A], Slot);
+  }
 
   std::string RetLabel =
       mangle(Cur->F->getName()) + "_ret_" + std::to_string(TempCounter++);
@@ -195,8 +212,38 @@ void UDONWriter::selectCall(const CallInst &I, UFunction &UF, unsigned &Idx) {
     return;
   }
 
-  if (Callee->isDeclaration())
+  if (Callee->isDeclaration()) {
+    // `sqrt` and `sqrtf` are the host's square root: Udon exposes exactly one,
+    // the double one. Re-deriving a root in C would be slower and less
+    // accurate, so both names lower straight to it. `sqrtf` narrows back.
+    StringRef Name = Callee->getName();
+    if (Name == "sqrt" || Name == "sqrtf") {
+      LLVMContext &C = Mod->getContext();
+      std::string X = slotFor(I.getArgOperand(0));
+      bool FromFloat = I.getArgOperand(0)->getType()->isFloatTy();
+      std::string D = X;
+      if (FromFloat) {
+        D = freshSlot("sqrt_d", Type::getDoubleTy(C));
+        emitExtern(UF.Blocks[Idx],
+                   "SystemConvert.__ToDouble__SystemSingle__SystemDouble", {X},
+                   D);
+      }
+      std::string R = freshSlot("sqrt_r", Type::getDoubleTy(C));
+      emitExtern(UF.Blocks[Idx],
+                 "SystemMath.__Sqrt__SystemDouble__SystemDouble", {D}, R);
+      if (FromFloat) {
+        std::string F = freshSlot("sqrt_f", Type::getFloatTy(C));
+        emitExtern(UF.Blocks[Idx],
+                   "SystemConvert.__ToSingle__SystemDouble__SystemSingle", {R},
+                   F);
+        emitCopy(UF.Blocks[Idx], F, slotFor(&I));
+      } else {
+        emitCopy(UF.Blocks[Idx], R, slotFor(&I));
+      }
+      return;
+    }
     reportUDONError("call to an undefined function: " + Callee->getName());
+  }
 
   std::vector<std::string> Args;
   Args.reserve(I.arg_size());
@@ -272,15 +319,22 @@ unsigned UDONWriter::emitSpill(unsigned BlockIdx, const std::string &Slot,
 
   B.Insts.push_back({UInst::PUSH, Ok});
   B.Insts.push_back({UInst::JUMP_IF_FALSE, Overflow});
-  // __Set__ and __Get__ are members of the array type, and the value they take
-  // or return is the element type -- so a `SystemBoolean` in an Int32 slot is
-  // stored as the Int32 the slot already holds.
+  // The stack is a typed array, but a `SystemBoolean` has no `SystemBooleanArray`
+  // in the whitelist, so it spills on the Int32 stack. That means the value
+  // must actually BE an Int32 at the `__Set__` call: convert the boolean slot
+  // into an Int32 slot, and convert back on the way out.
   std::string ArrayType = spillArrayType(UdonType);
-  std::string ElemType =
-      UdonType == "SystemBoolean" ? std::string("SystemInt32") : UdonType.str();
-  emitExtern(B, ArrayType + ".__Set__SystemInt32_" + ElemType +
+  std::string Stored = Slot;
+  if (UdonType == "SystemBoolean") {
+    Stored = freshSlot("spill_b", Type::getInt32Ty(Mod->getContext()));
+    emitExtern(B, "SystemConvert.__ToInt32__SystemBoolean__SystemInt32",
+               {Slot}, Stored);
+  }
+  emitExtern(B, ArrayType + ".__Set__SystemInt32_" +
+                    (UdonType == "SystemBoolean" ? std::string("SystemInt32")
+                                                 : UdonType.str()) +
                     "__SystemVoid",
-             {Stack, Cursor, Slot}, "");
+             {Stack, Cursor, Stored}, "");
   emitExtern(B,
              "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32",
              {Cursor, i32Constant(1)}, Cursor);
@@ -304,9 +358,17 @@ void UDONWriter::emitUnspill(UBlock &B, const std::string &Slot,
              "SystemInt32.__op_Subtraction__SystemInt32_SystemInt32__SystemInt32",
              {Cursor, i32Constant(1)}, Cursor);
   std::string ArrayType = spillArrayType(UdonType);
-  std::string ElemType =
-      UdonType == "SystemBoolean" ? std::string("SystemInt32") : UdonType.str();
-  emitExtern(B, ArrayType + ".__Get__SystemInt32__" + ElemType,
+  if (UdonType == "SystemBoolean") {
+    // Recover the Int32 the spill stored, then convert it back to a Boolean
+    // slot; the `__Get__` result cannot land in a Boolean-typed slot.
+    std::string AsInt = freshSlot("unspill_b", Type::getInt32Ty(Mod->getContext()));
+    emitExtern(B, "SystemInt32Array.__Get__SystemInt32__SystemInt32",
+               {Stack, Cursor}, AsInt);
+    emitExtern(B, "SystemConvert.__ToBoolean__SystemInt32__SystemBoolean",
+               {AsInt}, Slot);
+    return;
+  }
+  emitExtern(B, ArrayType + ".__Get__SystemInt32__" + UdonType.str(),
              {Stack, Cursor}, Slot);
 }
 
@@ -336,8 +398,38 @@ UDONWriter::liveSlotsAt(const Instruction &I) const {
     Add(mangle(F->getName()) + "_arg_" + std::to_string(A),
         udonTypeOf(F->getArg(A)->getType()));
 
-  // Walk forward from the call; anything read after it in the same function is
-  // live across it.
+  // Walk forward from the call. A slot is live across it when some later
+  // instruction READS it, so both the later instruction's own result and each
+  // of its operands are added.
+  //
+  // Adding only the later instruction's result is wrong, and wrong in the case
+  // that matters most: with two calls to the same recursive function, the first
+  // call's result is an OPERAND of an instruction after the second call
+  // (`%r = add %call1, %call2`). Its slot belongs to this function, so a nested
+  // activation overwrites it; without the spill the first result is lost.
+
+  // The original walk below scans the function's blocks in DECLARATION order
+  // and adds the results of instructions after the call. That misses one
+  // shape: a LOOP HEADER is usually declared before the block that contains
+  // the call, so a phi in the header whose operand is computed just before a
+  // recursive call is never seen. The value is live across the call, the
+  // callee (same function) clobbers its slot, and the phi then reads garbage.
+  // Measured on the Zig display-list walker: the cursor desynced by exactly
+  // one word per sub-list return, so the walk ran off the end of the list.
+  //
+  // The fix is narrow on purpose. Spilling every block reachable from the call
+  // is also "correct" but spills loop-body temporaries that the callee never
+  // reads, which tripled the program and overflowed the caller-save stacks.
+  auto AddValue = [&](const Value *V) {
+    auto It = Slots.find(V);
+    if (It == Slots.end())
+      return;
+    std::string Ty = udonTypeOf(V->getType());
+    if (Ty.empty())
+      return;
+    Add(It->second, Ty);
+  };
+
   bool After = false;
   for (const BasicBlock &BB : *F)
     for (const Instruction &Other : BB) {
@@ -347,16 +439,33 @@ UDONWriter::liveSlotsAt(const Instruction &I) const {
       }
       if (!After)
         continue;
-      if (Other.getType()->isVoidTy())
-        continue;
-      auto It = Slots.find(&Other);
-      if (It == Slots.end())
-        continue;
-      std::string Ty = udonTypeOf(Other.getType());
-      if (Ty.empty())
-        continue;
-      Add(It->second, Ty);
+      if (!Other.getType()->isVoidTy())
+        AddValue(&Other);
+      for (const Use &U : Other.operands())
+        AddValue(U.get());
     }
+
+  // Second pass: values defined in the call's block BEFORE the call that feed
+  // a phi in a block reachable from the call. Those phis execute after the
+  // call even though their block is declared earlier.
+  {
+    SmallPtrSet<const BasicBlock *, 32> Seen;
+    SmallVector<const BasicBlock *, 32> Work;
+    for (const BasicBlock *Succ : successors(I.getParent()))
+      if (Seen.insert(Succ).second)
+        Work.push_back(Succ);
+    while (!Work.empty()) {
+      const BasicBlock *BB = Work.pop_back_val();
+      for (const PHINode &Phi : BB->phis())
+        for (const Use &U : Phi.incoming_values())
+          if (auto *OI = dyn_cast<Instruction>(U.get()))
+            if (OI->getParent() == I.getParent())
+              AddValue(U.get());
+      for (const BasicBlock *Succ : successors(BB))
+        if (Seen.insert(Succ).second)
+          Work.push_back(Succ);
+    }
+  }
 
   return Live;
 }
