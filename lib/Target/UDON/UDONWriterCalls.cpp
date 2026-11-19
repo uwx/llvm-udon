@@ -445,27 +445,5 @@ UDONWriter::liveSlotsAt(const Instruction &I) const {
         AddValue(U.get());
     }
 
-  // Second pass: values defined in the call's block BEFORE the call that feed
-  // a phi in a block reachable from the call. Those phis execute after the
-  // call even though their block is declared earlier.
-  {
-    SmallPtrSet<const BasicBlock *, 32> Seen;
-    SmallVector<const BasicBlock *, 32> Work;
-    for (const BasicBlock *Succ : successors(I.getParent()))
-      if (Seen.insert(Succ).second)
-        Work.push_back(Succ);
-    while (!Work.empty()) {
-      const BasicBlock *BB = Work.pop_back_val();
-      for (const PHINode &Phi : BB->phis())
-        for (const Use &U : Phi.incoming_values())
-          if (auto *OI = dyn_cast<Instruction>(U.get()))
-            if (OI->getParent() == I.getParent())
-              AddValue(U.get());
-      for (const BasicBlock *Succ : successors(BB))
-        if (Seen.insert(Succ).second)
-          Work.push_back(Succ);
-    }
-  }
-
   return Live;
 }
