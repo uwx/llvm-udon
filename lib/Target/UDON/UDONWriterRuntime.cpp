@@ -193,6 +193,14 @@ unsigned UDONWriter::emitEntryPrologue(UFunction &UF, unsigned StubIdx) {
     emitExtern(Init,
                "SystemInt32Array.__CopyTo__SystemArray_SystemInt32__SystemVoid",
                {"__data_image", "__mem", i32Constant(4)}, "");
+    // The typed float arrays are constructed the same way, and the heap
+    // image fills them at import: their initializers are base64 f32 streams
+    // applied as `float[]`, so init only allocates.
+    for (const auto &[Slot, Count] : FloatArraySizes) {
+      emitExtern(Init, "SystemSingleArray.__ctor__SystemInt32__SystemSingleArray",
+                 {i32Constant(static_cast<int32_t>(Count))}, Slot.str());
+    }
+
     // Allocate each caller-save stack at `-udon-stack-depth` entries.
   for (const auto &[Stack, Type] :
        {std::pair<const char *, const char *>{"__stack_i32", "SystemInt32Array"},

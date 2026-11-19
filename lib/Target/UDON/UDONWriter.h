@@ -427,6 +427,25 @@ public:
   void classifyGlobals();
   /// The typed slot a promoted global lives in, or "" if it is not promoted.
   std::string promotedSlot(const GlobalVariable &G);
+  // --- typed float arrays -------------------------------------------------
+  //
+  // A global that is all-float and never byte-touched can live in its own
+  // `%SystemSingleArray` instead of `__mem`. That turns a float load from
+  // `__Get__` + `Int32BitsToSingle` into one `__Get__`, and a store from
+  // `SingleToInt32Bits` + `__Set__` into one `__Set__`. Measured on the
+  // playground: 64k of a tick's externs are exactly those bitcasts.
+  //
+  /// Global -> the `%SystemSingleArray` slot holding its floats.
+  DenseMap<const GlobalVariable *, std::string> FloatArraySlots;
+  /// Classifies globals into `FloatArraySlots`; runs before layOutGlobals.
+  void classifyFloatArrays();
+  /// The typed array slot for a pointer that provably denotes `G` or one of
+  /// its elements, plus the element index. "" when it must stay in `__mem`.
+  std::string floatArrayFor(const Value *Ptr, const std::string **IndexSlot);
+  /// Declares each float-array slot and pushes its heap-image initializer.
+  void emitFloatArrays();
+  /// Slot name -> element count, for the init block's ctor calls.
+  StringMap<uint64_t> FloatArraySizes;
 
 
   /// The condition as a `SystemBoolean` slot.

@@ -42,6 +42,8 @@ namespace Udon.Heap
         /// payload is a little-endian word stream; everything else is bytes.
         /// </summary>
         public bool BytesAreWords;
+        /// <summary>`bytes` payload is an f32 stream, applied as `float[]`.</summary>
+        public bool BytesAreFloats;
     }
 
     /// <summary>A parsed `&lt;name&gt;.udonheap.json`.</summary>
@@ -135,6 +137,13 @@ namespace Udon.Heap
                                     slot.Kind = vkey;
                                     slot.Bytes = reader.ReadBase64();
                                     break;
+                                case "floatArray":
+                                    // A modifier on `bytes`: the payload is a
+                                    // little-endian f32 stream and becomes a
+                                    // `float[]`, which is what a
+                                    // %SystemSingleArray slot declares.
+                                    slot.BytesAreFloats = reader.ReadBool();
+                                    break;
                                 case "wordArray":
                                     // A modifier on `bytes`, not a payload: the
                                     // byte stream is a little-endian word stream
@@ -193,7 +202,15 @@ namespace Udon.Heap
                         heap.SetHeapVariable(address, slot.Bool, typeof(bool));
                         break;
                     case "bytes":
-                        if (slot.BytesAreWords)
+                        if (slot.BytesAreFloats)
+                        {
+                            // %SystemSingleArray: one float per 4 bytes.
+                            float[] floats = new float[slot.Bytes.Length / 4];
+                            for (int i = 0; i < floats.Length; i++)
+                                floats[i] = BitConverter.ToSingle(slot.Bytes, i * 4);
+                            heap.SetHeapVariable(address, floats, typeof(float[]));
+                        }
+                        else if (slot.BytesAreWords)
                         {
                             // The payload is a little-endian word stream; a
                             // word array is what the slot declares, and a

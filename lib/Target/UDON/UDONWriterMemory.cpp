@@ -154,6 +154,200 @@ std::string UDONWriter::promotedSlot(const GlobalVariable &G) {
   return Name;
 }
 
+// --- typed float arrays ----------------------------------------------------
+//
+// A global whose element type is float, which is never byte-touched and whose
+// address never escapes into anything but a float-typed GEP, can live in its
+// own `%SystemSingleArray`. The win is the bitcast pair: in `__mem` a float
+// load is `__Get__` + `Int32BitsToSingle` and a store the reverse, so every
+// float access costs two externs. In a typed array it costs one.
+//
+// The test is deliberately conservative. Any use that is not a float-typed
+// GEP, a float load/store, or a plain copy of the pointer is an escape and
+// keeps the global in `__mem`. Measured on the playground: 18 globals qualify
+// (6,575 floats), including `gSineTable`, which `sins`/`coss` read from 13
+// translation units.
+
+/// True when `Ty` is a float, or an array/struct whose leaves are all floats.
+static bool isAllFloat(Type *Ty) {
+  if (Ty->isFloatTy())
+    return true;
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return isAllFloat(AT->getElementType());
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    for (Type *E : ST->elements())
+      if (!isAllFloat(E))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+/// True when every use of `G` stays float-typed: a GEP whose indexed type is
+/// float, a float load/store through such a pointer, or a copy of the pointer
+/// into a slot that is itself only used that way. Anything else is an escape.
+static bool onlyFloatAccesses(const GlobalVariable &G) {
+  SmallVector<const Value *, 16> Work{&G};
+  SmallPtrSet<const Value *, 16> Seen;
+  while (!Work.empty()) {
+    const Value *V = Work.pop_back_val();
+    if (!Seen.insert(V).second)
+      continue;
+    for (const Use &U : V->uses()) {
+      const auto *I = dyn_cast<Instruction>(U.getUser());
+      if (!I) {
+        // A constant-expression GEP of the pointer is fine when it stays
+        // float-typed: the declaring TU's own tables reach their reads that
+        // way after linking. Anything else in a constant is an escape.
+        auto *CE = dyn_cast<ConstantExpr>(U.getUser());
+        if (CE && CE->getOpcode() == Instruction::GetElementPtr &&
+            isAllFloat(CE->getType())) {
+          Work.push_back(CE);
+          continue;
+        }
+        return false; // any other constant use: treat as an escape
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+        // The pointer operand must be what we are tracking (or another GEP of
+        // the same tracked chain), and the element it lands on must be float.
+        // A GEP that walks into an integer field is an escape.
+        if (GEP->getPointerOperand() != V) {
+          if (getenv("UDON_DBG_F32"))
+            errs() << "  gep mismatch: " << GEP->getPointerOperand()->getName() << "\n";
+          return false;
+        }
+        if (!isAllFloat(GEP->getResultElementType()))
+          return false;
+        Work.push_back(GEP);
+        continue;
+      }
+      if (isa<PHINode>(I) || isa<SelectInst>(I)) {
+        // A phi or select of the pointer escapes: the tables it may choose
+        // between are individually typed, but Udon has no array select, so
+        // the writer cannot express choosing between two typed arrays. Keep
+        // such globals in memory.
+        return false;
+      }
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+        if (LI->getPointerOperand() == V && LI->getType()->isFloatTy())
+          continue;
+        if (getenv("UDON_DBG_F32"))
+          errs() << "  bad load: " << *LI->getType() << " op=" << LI->getPointerOperand()->getName() << "\n";
+        return false;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getPointerOperand() == V && SI->getValueOperand()->getType()->isFloatTy())
+          continue;
+        if (getenv("UDON_DBG_F32"))
+          errs() << "  bad store\n";
+        return false;
+      }
+      if (isa<BitCastInst>(I) || isa<PtrToIntInst>(I) || isa<IntToPtrInst>(I)) {
+        if (getenv("UDON_DBG_F32"))
+          errs() << "  cast escape\n";
+        return false;
+      }
+      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+        if (getenv("UDON_DBG_F32"))
+          errs() << "  call escape\n";
+        return false; // passed to a call: unknown callee behaviour
+      }
+      if (getenv("UDON_DBG_F32"))
+        errs() << "  other escape\n";
+      return false;
+    }
+  }
+  return true;
+}
+
+void UDONWriter::classifyFloatArrays() {
+  for (GlobalVariable &G : Mod->globals()) {
+    if (G.isDeclaration() || G.isConstant())
+      continue;
+    // A scalar float is already handled by classifyGlobals; only ARRAYS (or
+    // multi-field structs) need a typed array. A scalar claimed here would
+    // collide with its promoted `__gs_*` slot and disappear from both.
+    if (promotedSlot(G).size())
+      continue;
+    Type *Ty = G.getValueType();
+    if (!isAllFloat(Ty))
+      continue;
+    if (!isa<ArrayType>(Ty))
+      continue;
+    // The bridge ABI exports a byte offset into `__mem`; a typed array has no
+    // byte offset. Exported globals stay in memory until the host side learns
+    // to read a float array (that is the next increment).
+    if (G.getName().starts_with("udon_export_"))
+      continue;
+    if (!onlyFloatAccesses(G)) {
+      if (getenv("UDON_DBG_F32"))
+        errs() << "f32 rejected: " << G.getName() << "\n";
+      continue;
+    }
+    if (getenv("UDON_DBG_F32"))
+      errs() << "f32 accepted: " << G.getName() << "\n";
+    FloatArraySlots[&G] = "__f32_" + mangle(G.getName());
+  }
+}
+
+/// Declare each float-array slot and give it its initializer.
+///
+/// The slot is a `%SystemSingleArray` created at init time (an array cannot be
+/// a `.data_start` literal). Its contents come from the heap image as a
+/// base64 f32 stream, which `UdonHeapImage` applies as `float[]`.
+void UDONWriter::emitFloatArrays() {
+  if (getenv("UDON_DBG_F32"))
+    errs() << "float arrays accepted: " << FloatArraySlots.size() << "\n";
+  for (auto &[G, Slot] : FloatArraySlots) {
+    if (getenv("UDON_DBG_F32"))
+      errs() << "  emit " << Slot << " size=" << DL->getTypeAllocSize(G->getValueType()).getFixedValue() / 4 << "\n";
+    declareSlot(Slot, "SystemSingleArray");
+    NullSlots.push_back({Slot, "SystemSingleArray"});
+    // Element count, for the ctor call the init block emits.
+    TypeSize TSize = DL->getTypeAllocSize(G->getValueType());
+    if (TSize.isScalable())
+      reportUDONError("float array global with a scalable size: " + G->getName());
+    uint64_t Count = TSize.getFixedValue() / 4;
+    FloatArraySizes[Slot] = Count;
+
+    // Initializer bytes, if the global has one.
+    std::string Bytes;
+    if (auto *CA = dyn_cast<ConstantAggregateZero>(G->getInitializer())) {
+      (void)CA; // all zeros: the array is created zeroed, so no bytes needed
+    } else if (auto *AZ = dyn_cast<ConstantDataSequential>(G->getInitializer())) {
+      // A ConstantDataSequential of floats: emit its raw little-endian bits.
+      for (unsigned K = 0; K < AZ->getNumElements(); K++) {
+        auto *CF = dyn_cast<ConstantFP>(AZ->getElementAsConstant(K));
+        if (!CF)
+          break;
+        uint32_t Bits = CF->getValueAPF().bitcastToAPInt().getZExtValue();
+        Bytes.push_back((char)(Bits & 0xFF));
+        Bytes.push_back((char)((Bits >> 8) & 0xFF));
+        Bytes.push_back((char)((Bits >> 16) & 0xFF));
+        Bytes.push_back((char)((Bits >> 24) & 0xFF));
+      }
+    }
+    if (Bytes.empty())
+      continue;
+    // base64 of the f32 stream.
+    static const char *Tbl =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string Out;
+    for (size_t I = 0; I < Bytes.size(); I += 3) {
+      uint32_t N = (uint8_t)Bytes[I] << 16;
+      if (I + 1 < Bytes.size()) N |= (uint8_t)Bytes[I + 1] << 8;
+      if (I + 2 < Bytes.size()) N |= (uint8_t)Bytes[I + 2];
+      Out += Tbl[(N >> 18) & 63];
+      Out += Tbl[(N >> 12) & 63];
+      Out += I + 1 < Bytes.size() ? Tbl[(N >> 6) & 63] : '=';
+      Out += I + 2 < Bytes.size() ? Tbl[N & 63] : '=';
+    }
+    HeapEntries.push_back("\"" + Slot + "\": {\"type\": \"SystemSingleArray\", " +
+                          "\"value\": {\"bytes\": \"" + Out +
+                          "\", \"floatArray\": true}}");
+  }
+}
+
 void UDONWriter::layOutGlobals() {
   // Globals start after the reserved region. Their initializer bytes go into a
   // separate `__data_image` array rather than into `__mem` directly: the
@@ -165,6 +359,9 @@ void UDONWriter::layOutGlobals() {
       continue;
     // Promoted globals live in typed heap slots and claim no memory bytes.
     if (!promotedSlot(G).empty())
+      continue;
+    // Float arrays live in their own %SystemSingleArray slot.
+    if (FloatArraySlots.count(&G))
       continue;
     if (G.getAddressSpace() != 0)
       reportUDONError("global in a non-default address space: " + G.getName());
@@ -199,6 +396,8 @@ void UDONWriter::layOutGlobals() {
     // Promoted globals carry their initializer in their heap-image slot.
     if (!promotedSlot(G).empty())
       continue;
+    if (FloatArraySlots.count(&G))
+      continue;
     writeConstantBytes(G.getInitializer(), GlobalOffsets[&G]);
   }
 
@@ -225,7 +424,10 @@ void UDONWriter::layOutGlobals() {
 
 void UDONWriter::writeConstantBytes(const Constant *C, uint32_t Offset) {
   Type *Ty = C->getType();
-  if (DL->getTypeAllocSize(Ty) == 0)
+  TypeSize TS386 = DL->getTypeAllocSize(Ty);
+  if (TS386.isScalable())
+    reportUDONError("386 scalable");
+  if (TS386.getFixedValue() == 0)
     return;
 
   // Zero, undef and poison all mean "already zero".
@@ -237,7 +439,10 @@ void UDONWriter::writeConstantBytes(const Constant *C, uint32_t Offset) {
   // stride, which is the store size, not the alloc size.
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     Type *ElemTy = CDS->getElementType();
-    uint64_t Stride = DL->getTypeAllocSize(ElemTy);
+    TypeSize TS398 = DL->getTypeAllocSize(ElemTy);
+    if (TS398.isScalable())
+      reportUDONError("398 scalable");
+    uint64_t Stride = TS398.getFixedValue();
     for (unsigned I = 0; I < CDS->getNumElements(); I++)
       writeConstantBytes(CDS->getElementAsConstant(I),
                          Offset + static_cast<uint32_t>(Stride * I));
@@ -387,9 +592,122 @@ std::string UDONWriter::pointerOffset(const Value *V, UBlock &B) {
   return slotFor(V);
 }
 
+/// Resolve a pointer to a float-array global: returns the typed slot and, via
+/// `IndexSlot`, the slot naming the element index. Walks back through GEPs
+/// whose index chain is a constant or a slot; anything else is out of reach.
+std::string UDONWriter::floatArrayFor(const Value *Ptr,
+                                      const std::string **IndexSlot) {
+  *IndexSlot = nullptr;
+  const Value *V = Ptr;
+  int64_t ConstIndex = 0;
+  const GlobalVariable *G = dyn_cast<GlobalVariable>(V);
+  if (!G) {
+    // Walk a GEP whose pointer operand is the base and whose index is a
+    // constant or a slot. Only the outermost GEP is peeled: selectGEP has
+    // already folded the deeper ones into one.
+    auto *GEP = dyn_cast<GetElementPtrInst>(V);
+    if (!GEP)
+      return {};
+    const Value *Base = GEP->getPointerOperand();
+    SmallVector<const Value *, 4> Idxs;
+    for (const Use &U : GEP->indices())
+      Idxs.push_back(U.get());
+    // The pointee type comes from the GEP's own source type, which opaque
+    // pointers keep on the instruction.
+    Type *Ty = GEP->getSourceElementType();
+    int64_t Off = 0;
+    for (size_t K = 0; K < Idxs.size(); K++) {
+      if (auto *ST = dyn_cast<StructType>(Ty)) {
+        auto *CI = dyn_cast<ConstantInt>(Idxs[K]);
+        if (!CI)
+          return {};
+        TypeSize SO = DL->getStructLayout(ST)->getElementOffset(
+            static_cast<unsigned>(CI->getZExtValue()));
+        if (SO.isScalable())
+          return {};
+        Off += SO.getFixedValue();
+        Ty = ST->getElementType(static_cast<unsigned>(CI->getZExtValue()));
+        continue;
+      }
+      if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+        TypeSize SzTS = DL->getTypeAllocSize(AT->getElementType());
+        if (SzTS.isScalable())
+          return {};
+        uint64_t Sz = SzTS.getFixedValue();
+        auto *CI = dyn_cast<ConstantInt>(Idxs[K]);
+        if (CI) {
+          Off += CI->getSExtValue() * static_cast<int64_t>(Sz);
+          Ty = AT->getElementType();
+        } else {
+          // Variable index into an array of floats: the index slot IS the
+          // element index, scaled only when the element is not 4 bytes.
+          if (!AT->getElementType()->isFloatTy())
+            return {};
+          Ty = AT->getElementType();
+          if (K + 1 != Idxs.size())
+            return {};
+          auto It = Slots.find(Idxs[K]);
+          if (It == Slots.end())
+            return {};
+          *IndexSlot = &It->second;
+          ConstIndex = Off / 4;
+          Off = 0;
+          break;
+        }
+      }
+    }
+    if (auto *GV = dyn_cast<GlobalVariable>(Base))
+      G = GV;
+    ConstIndex += Off / 4;
+  }
+  if (!G)
+    return {};
+  auto It = FloatArraySlots.find(G);
+  if (It == FloatArraySlots.end())
+    return {};
+  // A non-zero constant index has to reach the array access as a literal or
+  // slot; the caller handles folding the offset into its own index math.
+  if (ConstIndex != 0 && !*IndexSlot)
+    return {};
+  return It->second;
+}
+
 void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
                            unsigned &Idx) {
   UBlock &B = UF.Blocks[Idx];
+  // A GEP whose base is a typed float-array global produces NO address: the
+  // typed array access below works in ELEMENT indices, and the base global
+  // itself has no byte offset at all. The element index travels in the GEP's
+  // own result slot, which floatArrayFor reads back at the load/store.
+  // The base may reach a float-array global through a phi or select of the
+  // table pointer (the audio ramping tables do exactly this). Resolve the
+  // chain: every incoming must denote the SAME typed array, else stay byte.
+  const Value *BaseOp = I.getPointerOperand();
+  const GlobalVariable *TypedBase = dyn_cast<GlobalVariable>(BaseOp);
+  if (!TypedBase) {
+    if (auto *P = dyn_cast<PHINode>(BaseOp)) {
+      const GlobalVariable *Common = nullptr;
+      bool Same = true;
+      for (const Use &PU : P->incoming_values()) {
+        auto *GV = dyn_cast<GlobalVariable>(PU.get());
+        if (!GV || !FloatArraySlots.count(GV)) { Same = false; break; }
+        if (!Common) Common = GV;
+        else if (Common != GV) { Same = false; break; }
+      }
+      if (Same) TypedBase = Common;
+    }
+  }
+  if (TypedBase && FloatArraySlots.count(TypedBase)) {
+      unsigned Last = I.getNumIndices() - 1;
+      const Value *LastIdx = I.getOperand(Last + 1);
+      if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
+        emitCopy(B, i32Constant(static_cast<int32_t>(CI->getSExtValue())),
+                 slotFor(&I));
+        return;
+      }
+      emitCopy(B, slotFor(LastIdx), slotFor(&I));
+      return;
+    }
   // GEP arithmetic on the byte offset: a constant part folds into the base, and
   // a variable index is multiplied by the size of the type it indexes.
   //
@@ -943,6 +1261,23 @@ void UDONWriter::selectLoad(const LoadInst &I, UFunction &UF,
       emitCopy(B, S, slotFor(&I));
       return;
     }
+  // A float load through a typed float-array global is ONE `__Get__`: the
+  // typed path needs no word-index shift and no bitcast. `selectGEP` put the
+  // element index into the load's own slot when the base is a float-array
+  // global, so this resolves the pointer, not an address.
+  if (I.getType()->isFloatTy()) {
+    const std::string *IdxSlot = nullptr;
+    if (std::string Arr = floatArrayFor(I.getPointerOperand(), &IdxSlot);
+        !Arr.empty()) {
+      std::string Index = IdxSlot ? *IdxSlot : i32Constant(0);
+      std::string V =
+          freshSlot("f32ld", Type::getFloatTy(Mod->getContext()));
+      emitExtern(B, "SystemSingleArray.__Get__SystemInt32__SystemSingle",
+                 {Arr, Index}, V);
+      emitCopy(B, V, slotFor(&I));
+      return;
+    }
+  }
   std::string Offset = pointerOffset(I.getPointerOperand(), B);
   std::string Value = emitLoad(Idx, Offset, I.getType(), I.getAlign().value());
   emitCopy(UF.Blocks[Idx], Value, slotFor(&I));
@@ -961,6 +1296,18 @@ void UDONWriter::selectStore(const StoreInst &I, UFunction &UF,
       emitCopy(B, slotFor(I.getValueOperand()), S);
       return;
     }
+  // The store half of the same shape: one `__Set__`, no bitcast.
+  if (I.getValueOperand()->getType()->isFloatTy()) {
+    const std::string *IdxSlot = nullptr;
+    if (std::string Arr = floatArrayFor(I.getPointerOperand(), &IdxSlot);
+        !Arr.empty()) {
+      std::string Index = IdxSlot ? *IdxSlot : i32Constant(0);
+      emitExtern(B,
+                 "SystemSingleArray.__Set__SystemInt32_SystemSingle__SystemVoid",
+                 {Arr, Index, slotFor(I.getValueOperand())}, "");
+      return;
+    }
+  }
   std::string Offset = pointerOffset(I.getPointerOperand(), B);
   emitStore(Idx, slotFor(I.getValueOperand()), Offset,
             I.getValueOperand()->getType(), I.getAlign().value());

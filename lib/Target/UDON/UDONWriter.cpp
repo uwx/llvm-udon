@@ -684,6 +684,10 @@ bool UDONWriter::runOnModule(Module &M) {
   // Non-address-taken scalar globals become typed heap slots; the rest stay in
   // `__mem`. Must run before layout so promoted globals claim no memory bytes.
   classifyGlobals();
+  // Float-only globals with no byte-level reach move to typed
+  // `%SystemSingleArray` slots, which halves the externs of every float access.
+  classifyFloatArrays();
+  emitFloatArrays();
   layOutGlobals();
 
   // `udon_export_<name>` globals are the ABI between this program and its
