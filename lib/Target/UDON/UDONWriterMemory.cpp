@@ -822,14 +822,19 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
     }
   }
   std::string CursorBaseSlot;
-  if (typedCursorOf(BaseOp, CursorBaseSlot)) {
+  const std::string *CursorArr = nullptr;
+  if (typedCursorOf(BaseOp, CursorBaseSlot, &CursorArr)) {
     unsigned Last = I.getNumIndices() - 1;
     const Value *LastIdx = I.getOperand(Last + 1);
     std::string Delta;
     if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
       int64_t D = CI->getSExtValue();
       if (D == 0) {
-        emitCopy(B, CursorBaseSlot, slotFor(&I));
+        std::string S = slotFor(&I);
+        emitCopy(B, CursorBaseSlot, S);
+        // The result is itself a cursor into the same array, so a GEP of it
+        // (`vec3f_normalize(gep %cursor, 3)` reads `gep %arg, 1`) resolves.
+        TypedPointerArrays[S] = *CursorArr;
         return;
       }
       Delta = i32Constant(static_cast<int32_t>(D));
@@ -840,7 +845,9 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
     emitExtern(B,
                "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32",
                {CursorBaseSlot, Delta}, Sum);
-    emitCopy(B, Sum, slotFor(&I));
+    std::string S = slotFor(&I);
+    emitCopy(B, Sum, S);
+    TypedPointerArrays[S] = *CursorArr;
     return;
   }
   if (TypedBase && FloatArraySlots.count(TypedBase)) {
