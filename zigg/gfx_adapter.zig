@@ -114,6 +114,7 @@ inline fn readWord(words: [*]u32, idx: usize) struct { u32, usize } {
 /// Recurse with nothing but the pointer live. A separate noinline function is
 /// what limits the spilled set to one slot, matching the C adapter's cost.
 fn processDisplayList(words: [*]u32) void {
+    
     var i: usize = 0;
     var vdata: [*]Vtx = undefined;
     var haveVtx = false;
@@ -121,6 +122,7 @@ fn processDisplayList(words: [*]u32) void {
     while (true) {
         const cmdw = readWord(words, i);
         const cmd = cmdw[0];
+        
         i = cmdw[1];
         switch (cmd) {
             GFXCMD_VertexData => {
@@ -279,13 +281,13 @@ fn processDisplayList(words: [*]u32) void {
                 processDisplayList(@ptrFromInt(sub));
             },
             GFXCMD_EndDisplayList => return,
-            // An unknown command word must still advance, or the loop spins
-            // forever on malformed or unhandled data. The C adapter's cases
-            // each move `ptr` themselves; a Zig `switch` needs this arm to be
-            // explicit. (Measured: without it, the real Mario display list
-            // reached an unrecognised word and the caller-save cursor grew to
-            // its limit -- an apparent infinite recursion.)
-            else => i += 1,
+            // An unknown command word: readWord already advanced past it (the
+            // command word was words[i] and i now points at the next word),
+            // so the correct action is NOTHING. Advancing again desyncs the
+            // walk (measured: the EndDisplayList word was stepped over, the
+            // loop ran into adjacent memory, and the uv cursor overran the
+            // geometry buffer).
+            else => {},
         }
     }
 }

@@ -697,7 +697,8 @@ namespace Udon.VM
             {
                 // An exception is data: report it, then isolate the program so
                 // the next invocation does not inherit the poisoned heap.
-                _out.WriteLine("EXCEPTION " + entry + " " + ex.GetType().Name + ": " + ex.Message);
+                _out.WriteLine("EXCEPTION " + entry + " " + ex.GetType().Name + ": " + ex.Message +
+                    " (pc=0x" + _vm.GetProgramCounter().ToString("X8") + ")");
                 for (var e = ex.InnerException; e != null; e = e.InnerException)
                     _out.WriteLine("  cause: " + e.GetType().Name + ": " + e.Message);
                 DiscardProgram();

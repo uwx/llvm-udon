@@ -826,9 +826,16 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
   if (typedCursorOf(BaseOp, CursorBaseSlot, &CursorArr)) {
     unsigned Last = I.getNumIndices() - 1;
     const Value *LastIdx = I.getOperand(Last + 1);
+    // The inliner rewrites `gep float, %p, i32 n` into `gep i8, %p, i32 n*4`,
+    // so a byte-typed result means the offset is in BYTES: an element cursor
+    // needs it divided by the element size. A float-typed GEP is already in
+    // elements.
+    bool ByteTyped =
+        I.getSourceElementType() && I.getSourceElementType()->isIntegerTy(8);
+    int64_t ByteDiv = ByteTyped ? 4 : 1;
     std::string Delta;
     if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
-      int64_t D = CI->getSExtValue();
+      int64_t D = CI->getSExtValue() / ByteDiv;
       if (D == 0) {
         std::string S = slotFor(&I);
         emitCopy(B, CursorBaseSlot, S);
@@ -838,8 +845,16 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
         return;
       }
       Delta = i32Constant(static_cast<int32_t>(D));
-    } else {
+    } else if (ByteDiv == 1) {
       Delta = slotFor(LastIdx);
+    } else {
+      // A variable byte offset: shift right by 2 to get elements.
+      std::string Shr =
+          freshSlot("gepb", Type::getInt32Ty(Mod->getContext()));
+      emitExtern(B,
+                 "SystemInt32.__op_RightShift__SystemInt32_SystemInt32__SystemInt32",
+                 {slotFor(LastIdx), i32Constant(2)}, Shr);
+      Delta = Shr;
     }
     std::string Sum = freshSlot("gepi", Type::getInt32Ty(Mod->getContext()));
     emitExtern(B,
