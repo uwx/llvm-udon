@@ -749,6 +749,13 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
 
 bool UDONWriter::typedCursorOf(const Value *V, std::string &BaseSlot,
                                const std::string **ArrOut) {
+  SmallPtrSet<const Value *, 8> Seen;
+  return typedCursorOf(V, BaseSlot, ArrOut, Seen);
+}
+
+bool UDONWriter::typedCursorOf(const Value *V, std::string &BaseSlot,
+                               const std::string **ArrOut,
+                               SmallPtrSet<const Value *, 8> &Seen) {
   // A constant resolves through the cached, idempotent `constantSlot`; a
   // non-constant only if its slot was already allocated. Either way nothing
   // is created here, so calling this from a predicate cannot perturb the
@@ -763,8 +770,41 @@ bool UDONWriter::typedCursorOf(const Value *V, std::string &BaseSlot,
     S = It->second;
   }
   auto TA = TypedPointerArrays.find(S);
-  if (TA == TypedPointerArrays.end())
+  if (TA == TypedPointerArrays.end()) {
+    // A phi of cursor values: every incoming must be a cursor into the SAME
+    // array, and the phi's own slot (filled by the phi copies) then holds the
+    // selected index. This is the shape a `while` loop's carried cursor takes
+    // (`g_uvPtr` loaded once, advanced in each arm, merged at the back edge),
+    // which is how the Zig adapter's walk is written.
+    if (auto *P = dyn_cast<PHINode>(V)) {
+      if (!Seen.insert(P).second)
+        return false; // a back edge: the phi resolves to itself
+      std::string Common;
+      for (const Use &In : P->incoming_values()) {
+        std::string InSlot;
+        const std::string *InArr = nullptr;
+        if (!typedCursorOf(In.get(), InSlot, &InArr, Seen))
+          return false;
+        if (Common.empty())
+          Common = *InArr;
+        else if (Common != *InArr)
+          return false;
+      }
+      if (Common.empty())
+        return false;
+      auto It = Slots.find(P);
+      if (It == Slots.end())
+        return false;
+      BaseSlot = It->second;
+      TypedPointerArrays[BaseSlot] = Common;
+      if (ArrOut) {
+        auto TA2 = TypedPointerArrays.find(BaseSlot);
+        *ArrOut = &TA2->second;
+      }
+      return true;
+    }
     return false;
+  }
   BaseSlot = S;
   if (ArrOut)
     *ArrOut = &TA->second;

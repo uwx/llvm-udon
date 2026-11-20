@@ -472,6 +472,12 @@ public:
   /// and non-constants are looked up in `Slots` only.
   bool typedCursorOf(const Value *V, std::string &BaseSlot,
                      const std::string **ArrOut = nullptr);
+  /// Cycle-guarded form: a phi's incoming values can reach back to the phi
+  /// itself through a loop back edge, so the phi case recurses with a seen
+  /// set.
+  bool typedCursorOf(const Value *V, std::string &BaseSlot,
+                     const std::string **ArrOut,
+                     SmallPtrSet<const Value *, 8> &Seen);
   /// Instruction -> true when its i32 result is an ELEMENT INDEX rather than a
   /// byte offset: `ptrtoint` of a typed cursor, and the `sub`/`trunc` of such
   /// values. The writer uses it to drop the byte-to-element `>> 2` that the
