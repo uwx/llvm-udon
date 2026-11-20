@@ -322,8 +322,9 @@ void UDONWriter::analyzeTypedPointers() {
             // A load of a provenanced pointer global carries the array on.
             if (auto *G = dyn_cast<GlobalVariable>(Ptr)) {
               auto It = TypedPointers.find(G);
-              if (It != TypedPointers.end() && It->second)
+              if (It != TypedPointers.end() && It->second) {
                 Known[&I] = {It->second, 0};
+              }
               // A holder global yields a struct pointer whose fields carry
               // provenance: copy them into this function's Fields.
               auto HF = HeldFields.find(G);
@@ -467,5 +468,15 @@ void UDONWriter::analyzeTypedPointers() {
     for (const GlobalVariable *G : FloatArrays)
       if (!Poisoned.count(G))
         SafeTypedArrays.insert(G);
+
+  if (getenv("UDON_DBG_TYPED")) {
+    errs() << "typed: safe:";
+    for (const GlobalVariable *G : SafeTypedArrays)
+      errs() << " " << G->getName();
+    errs() << "\ntyped: poisoned:";
+    for (const GlobalVariable *G : Poisoned)
+      errs() << " " << G->getName();
+    errs() << "\n";
+  }
 
 }

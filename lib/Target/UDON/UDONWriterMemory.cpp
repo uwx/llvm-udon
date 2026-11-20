@@ -351,6 +351,9 @@ void UDONWriter::emitFloatArrays() {
     HeapEntries.push_back("\"" + Slot + "\": {\"type\": \"SystemSingleArray\", " +
                           "\"value\": {\"bytes\": \"" + Out +
                           "\", \"floatArray\": true}}");
+    // The heap image carries this array's data; the init block must not
+    // construct over it.
+    F32sWithInitializers.insert(Slot);
   }
 }
 
@@ -621,15 +624,13 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
   // result slot IS the index into the same array.
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
     if (GEP->getResultElementType() && GEP->getResultElementType()->isFloatTy()) {
-      auto BaseSlotIt = Slots.find(GEP->getPointerOperand());
-      if (BaseSlotIt != Slots.end()) {
-        auto TA = TypedPointerArrays.find(BaseSlotIt->second);
-        if (TA != TypedPointerArrays.end()) {
-          auto ResSlotIt = Slots.find(GEP);
-          if (ResSlotIt != Slots.end()) {
-            *IndexSlot = &ResSlotIt->second;
-            return TA->second;
-          }
+      std::string BaseSlot;
+      const std::string *Arr = nullptr;
+      if (typedCursorOf(GEP->getPointerOperand(), BaseSlot, &Arr)) {
+        auto ResSlotIt = Slots.find(GEP);
+        if (ResSlotIt != Slots.end()) {
+          *IndexSlot = &ResSlotIt->second;
+          return *Arr;
         }
       }
     }
@@ -746,6 +747,30 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
   return It->second;
 }
 
+bool UDONWriter::typedCursorOf(const Value *V, std::string &BaseSlot,
+                               const std::string **ArrOut) {
+  // A constant resolves through the cached, idempotent `constantSlot`; a
+  // non-constant only if its slot was already allocated. Either way nothing
+  // is created here, so calling this from a predicate cannot perturb the
+  // slot map the way `slotFor` would.
+  std::string S;
+  if (auto *C = dyn_cast<Constant>(V))
+    S = constantSlot(C);
+  else {
+    auto It = Slots.find(V);
+    if (It == Slots.end())
+      return false;
+    S = It->second;
+  }
+  auto TA = TypedPointerArrays.find(S);
+  if (TA == TypedPointerArrays.end())
+    return false;
+  BaseSlot = S;
+  if (ArrOut)
+    *ArrOut = &TA->second;
+  return true;
+}
+
 void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
                            unsigned &Idx) {
   UBlock &B = UF.Blocks[Idx];
@@ -796,21 +821,15 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
       if (Same) TypedBase = Common;
     }
   }
-  auto TypedCursor = [&]() -> const std::string * {
-    auto It = Slots.find(BaseOp);
-    if (It == Slots.end())
-      return nullptr;
-    auto TA = TypedPointerArrays.find(It->second);
-    return TA == TypedPointerArrays.end() ? nullptr : &It->second;
-  };
-  if (const std::string *BaseSlotP = TypedCursor()) {
+  std::string CursorBaseSlot;
+  if (typedCursorOf(BaseOp, CursorBaseSlot)) {
     unsigned Last = I.getNumIndices() - 1;
     const Value *LastIdx = I.getOperand(Last + 1);
     std::string Delta;
     if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
       int64_t D = CI->getSExtValue();
       if (D == 0) {
-        emitCopy(B, *BaseSlotP, slotFor(&I));
+        emitCopy(B, CursorBaseSlot, slotFor(&I));
         return;
       }
       Delta = i32Constant(static_cast<int32_t>(D));
@@ -820,7 +839,7 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
     std::string Sum = freshSlot("gepi", Type::getInt32Ty(Mod->getContext()));
     emitExtern(B,
                "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32",
-               {*BaseSlotP, Delta}, Sum);
+               {CursorBaseSlot, Delta}, Sum);
     emitCopy(B, Sum, slotFor(&I));
     return;
   }

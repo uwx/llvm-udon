@@ -446,6 +446,10 @@ public:
   void emitFloatArrays();
   /// Slot name -> element count, for the init block's ctor calls.
   StringMap<uint64_t> FloatArraySizes;
+  /// Typed float-array slots whose heap-image entry carries initial data:
+  /// the init block must NOT construct them (a fresh zeroed array would
+  /// replace the applied one).
+  StringSet<> F32sWithInitializers;
   // --- typed float-array partition ---------------------------------------
   //
   // See UDONTypedArrays.cpp. `analyzeTypedPointers` runs BEFORE
@@ -460,6 +464,14 @@ public:
   DenseMap<const Instruction *, const GlobalVariable *> ProvenancedLoads;
   /// Slot name -> typed array slot, for slots holding an element index.
   StringMap<std::string> TypedPointerArrays;
+  /// True when `V`'s slot holds an ELEMENT INDEX into a typed float array
+  /// (a provenanced cursor load, or a constant address of a typed array):
+  /// writes the base's slot name into `BaseSlot` and, via `ArrOut`, the
+  /// array's slot. Pure: it allocates no slots, so it is safe to call from
+  /// any predicate. `constantSlot` is idempotent and cached for constants,
+  /// and non-constants are looked up in `Slots` only.
+  bool typedCursorOf(const Value *V, std::string &BaseSlot,
+                     const std::string **ArrOut = nullptr);
   /// Instruction -> true when its i32 result is an ELEMENT INDEX rather than a
   /// byte offset: `ptrtoint` of a typed cursor, and the `sub`/`trunc` of such
   /// values. The writer uses it to drop the byte-to-element `>> 2` that the

@@ -197,8 +197,12 @@ unsigned UDONWriter::emitEntryPrologue(UFunction &UF, unsigned StubIdx) {
     // image fills them at import: their initializers are base64 f32 streams
     // applied as `float[]`, so init only allocates.
     for (const auto &[Slot, Count] : FloatArraySizes) {
-      emitExtern(Init, "SystemSingleArray.__ctor__SystemInt32__SystemSingleArray",
-                 {i32Constant(static_cast<int32_t>(Count))}, Slot.str());
+      // An array with initial data comes from the heap image (a `float[]`
+      // applied to the slot at load time); constructing here would replace
+      // it with a fresh zeroed array. Only the empty ones construct.
+      if (!F32sWithInitializers.count(Slot.str()))
+        emitExtern(Init, "SystemSingleArray.__ctor__SystemInt32__SystemSingleArray",
+                   {i32Constant(static_cast<int32_t>(Count))}, Slot.str());
     }
 
     // Allocate each caller-save stack at `-udon-stack-depth` entries.
