@@ -463,8 +463,9 @@ void UDONWriter::analyzeTypedPointers() {
 
   // The safe set: candidates minus the poisoned. An array nobody derived a
   // pointer from is safe too -- plain float GEP stores need no provenance.
-  for (const GlobalVariable *G : FloatArrays)
-    if (!Poisoned.count(G))
-      SafeTypedArrays.insert(G);
+  if (!getenv("UDON_NO_TYPED"))
+    for (const GlobalVariable *G : FloatArrays)
+      if (!Poisoned.count(G))
+        SafeTypedArrays.insert(G);
 
 }
