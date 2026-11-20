@@ -621,12 +621,19 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
         auto *CI = dyn_cast<ConstantInt>(Idxs[K]);
         if (!CI)
           return {};
-        TypeSize SO = DL->getStructLayout(ST)->getElementOffset(
-            static_cast<unsigned>(CI->getZExtValue()));
+        unsigned Field = static_cast<unsigned>(CI->getZExtValue());
+        // `getStructLayout` returns null for an opaque or zero-sized struct,
+        // and the index can name a field the struct does not have; both are
+        // reachable from GEPs the frontend emits. Either one means "not a
+        // float-array access", not a crash.
+        const StructLayout *SL = DL->getStructLayout(ST);
+        if (!SL || Field >= ST->getNumElements())
+          return {};
+        TypeSize SO = SL->getElementOffset(Field);
         if (SO.isScalable())
           return {};
         Off += SO.getFixedValue();
-        Ty = ST->getElementType(static_cast<unsigned>(CI->getZExtValue()));
+        Ty = ST->getElementType(Field);
         continue;
       }
       if (auto *AT = dyn_cast<ArrayType>(Ty)) {
