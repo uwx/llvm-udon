@@ -503,7 +503,21 @@ namespace Udon.VM
                 uint address = symbols.GetAddressFromSymbol(dump.Key);
                 if (!heap.IsHeapVariableInitialized(address)) continue;
                 object value = heap.GetHeapVariable(address);
-                if (value is byte[] b) File.WriteAllBytes(dump.Value, b);
+                // A typed float array (the writer's `SingleArray` partition)
+                // or a word array both hold the payload directly.
+                if (value is float[] fa)
+                {
+                    var buf = new byte[fa.Length * 4];
+                    Buffer.BlockCopy(fa, 0, buf, 0, buf.Length);
+                    File.WriteAllBytes(dump.Value, buf);
+                }
+                else if (value is int[] ia)
+                {
+                    var buf = new byte[ia.Length * 4];
+                    Buffer.BlockCopy(ia, 0, buf, 0, buf.Length);
+                    File.WriteAllBytes(dump.Value, buf);
+                }
+                else if (value is byte[] b) File.WriteAllBytes(dump.Value, b);
             }
         }
 
