@@ -101,11 +101,17 @@ inline fn storeV(dst: [*]f32, v: Vec3) void {
     dst[2] = v.z;
 }
 
-/// Read the word at `idx` and advance. Takes the cursor BY VALUE and returns
-/// both, so the caller's `i` never has its address taken: `&i` would force the
-/// cursor into memory and make every read a load-modify-store through __mem.
-inline fn readWord(words: [*]u32, idx: usize) struct { u32, usize } {
-    return .{ words[idx], idx + 1 };
+/// Read the word at `ptr` and advance it by one element — the direct mirror of
+/// the C adapter's `*ptr++`. A pointer cursor (not a loop-carried element index)
+/// is essential: the writer mis-threads a loop-carried `i` phi across this
+/// function's 8-arm switch and its recursive self-call, so a second `words[i]`
+/// read in the same arm could land on the stale index and desync the walk
+/// (measured: the recursion bases cycled with period 4 and the buffer overflowed
+/// at 1024 triangles instead of terminating at 752).
+inline fn nextWord(ptr: *[*]u32) u32 {
+    const w = ptr.*;
+    ptr.* = w + 1;
+    return w[0];
 }
 
 // process_display_list: walk the raw words, gather three vertices, transform
@@ -113,40 +119,34 @@ inline fn readWord(words: [*]u32, idx: usize) struct { u32, usize } {
 // structs it points at; the transform itself is pure value math.
 /// Recurse with nothing but the pointer live. A separate noinline function is
 /// what limits the spilled set to one slot, matching the C adapter's cost.
+///
+/// The walk uses a POINTER cursor (`var ptr`), not a loop-carried element index.
+/// The two are equivalent in C (`*ptr++` vs `words[i++]`), but the writer
+/// mis-threads the element-index phi across this function's switch and
+/// recursive self-call, while a single pointer value survives the emulated
+/// stack frame correctly.
 fn processDisplayList(words: [*]u32) void {
-    
-    var i: usize = 0;
+    var ptr: [*]u32 = words;
     var vdata: [*]Vtx = undefined;
     var haveVtx = false;
 
     while (true) {
-        const cmdw = readWord(words, i);
-        const cmd = cmdw[0];
-        
-        i = cmdw[1];
+        const cmd = nextWord(&ptr);
         switch (cmd) {
             GFXCMD_VertexData => {
                 // The first operand IS the vertex buffer pointer; the next two
                 // (count, first-index) are unused by this adapter.
-                const vw = readWord(words, i);
-                const v: usize = @intCast(vw[0]);
-                i = vw[1];
-                i += 1; // n
-                i += 1; // v0
+                const v: usize = @intCast(nextWord(&ptr));
+                _ = nextWord(&ptr); // n
+                _ = nextWord(&ptr); // v0
                 vdata = @ptrFromInt(v);
                 haveVtx = true;
             },
             GFXCMD_Triangle => {
-                const v00w = readWord(words, i);
-                const v00: usize = @intCast(v00w[0]);
-                i = v00w[1];
-                const v01w = readWord(words, i);
-                const v01: usize = @intCast(v01w[0]);
-                i = v01w[1];
-                const v02w = readWord(words, i);
-                const v02: usize = @intCast(v02w[0]);
-                i = v02w[1];
-                i += 1; // flag0
+                const v00: usize = @intCast(nextWord(&ptr));
+                const v01: usize = @intCast(nextWord(&ptr));
+                const v02: usize = @intCast(nextWord(&ptr));
+                _ = nextWord(&ptr); // flag0
                 if (!haveVtx) unreachable;
 
                 const p0 = Vec3{ .x = vdata[v00].ob[0], .y = vdata[v00].ob[1], .z = vdata[v00].ob[2] };
@@ -235,12 +235,8 @@ fn processDisplayList(words: [*]u32) void {
                     o.numTrianglesUsed = @intCast(g_triangles);
             },
             GFXCMD_Light => {
-                const lw = readWord(words, i);
-                const l: usize = @intCast(lw[0]);
-                i = lw[1];
-                const nw = readWord(words, i);
-                const n = nw[0];
-                i = nw[1];
+                const l: usize = @intCast(nextWord(&ptr));
+                const n = nextWord(&ptr);
                 if (n == 1) {
                     const data: *const extern struct { col: [3]u8, pad: u8 } = @ptrFromInt(l);
                     g_color[0] = @as(f32, @floatFromInt(data.col[0])) / 255.0;
@@ -249,30 +245,18 @@ fn processDisplayList(words: [*]u32) void {
                 }
             },
             GFXCMD_Texture => {
-                const _g_scaleSw = readWord(words, i);
-                g_scaleS = @intCast(_g_scaleSw[0]);
-                i = _g_scaleSw[1];
-                const _g_scaleTw = readWord(words, i);
-                g_scaleT = @intCast(_g_scaleTw[0]);
-                i = _g_scaleTw[1];
-                const _g_textureOnw = readWord(words, i);
-                g_textureOn = @intCast(_g_textureOnw[0]);
-                i = _g_textureOnw[1];
+                g_scaleS = @intCast(nextWord(&ptr));
+                g_scaleT = @intCast(nextWord(&ptr));
+                g_textureOn = @intCast(nextWord(&ptr));
             },
             GFXCMD_SetTileSize => {
-                const _g_ulsw = readWord(words, i);
-                g_uls = @intCast(_g_ulsw[0]);
-                i = _g_ulsw[1];
-                const _g_ultw = readWord(words, i);
-                g_ult = @intCast(_g_ultw[0]);
-                i = _g_ultw[1];
-                i += 1; // lrs
-                i += 1; // lrt
+                g_uls = @intCast(nextWord(&ptr));
+                g_ult = @intCast(nextWord(&ptr));
+                _ = nextWord(&ptr); // lrs
+                _ = nextWord(&ptr); // lrt
             },
             GFXCMD_SetTextureImage => {
-                const _g_textureIndexw = readWord(words, i);
-                g_textureIndex = @intCast(_g_textureIndexw[0]);
-                i = _g_textureIndexw[1];
+                g_textureIndex = @intCast(nextWord(&ptr));
                 g_texWidth = tex_widths[@intCast(g_textureIndex)];
                 g_texHeight = tex_heights[@intCast(g_textureIndex)];
             },
@@ -282,14 +266,12 @@ fn processDisplayList(words: [*]u32) void {
                 // this call, so keeping the whole switch's state alive here
                 // multiplies the stack cost of each nesting level (measured:
                 // a 1024-deep list overflowed the caller-save stacks).
-                const subw = readWord(words, i);
-                const sub: usize = @intCast(subw[0]);
-                i = subw[1];
+                const sub: usize = @intCast(nextWord(&ptr));
                 processDisplayList(@ptrFromInt(sub));
             },
             GFXCMD_EndDisplayList => return,
-            // An unknown command word: readWord already advanced past it (the
-            // command word was words[i] and i now points at the next word),
+            // An unknown command word: nextWord already advanced past it (the
+            // command word was at `ptr` and it now points at the next word),
             // so the correct action is NOTHING. Advancing again desyncs the
             // walk (measured: the EndDisplayList word was stepped over, the
             // loop ran into adjacent memory, and the uv cursor overran the
