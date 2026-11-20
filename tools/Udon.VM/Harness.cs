@@ -701,6 +701,10 @@ namespace Udon.VM
                     " (pc=0x" + _vm.GetProgramCounter().ToString("X8") + ")");
                 for (var e = ex.InnerException; e != null; e = e.InnerException)
                     _out.WriteLine("  cause: " + e.GetType().Name + ": " + e.Message);
+                // Dump before the program is discarded: a crashing run's heap is
+                // often the only evidence of where the state went wrong.
+                try { WriteDumps(); }
+                catch (Exception dex) { _out.WriteLine("dump failed: " + dex.GetType().Name + ": " + dex.Message); }
                 DiscardProgram();
                 return true;
             }
