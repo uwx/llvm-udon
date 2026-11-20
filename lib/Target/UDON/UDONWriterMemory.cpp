@@ -274,19 +274,25 @@ void UDONWriter::classifyFloatArrays() {
       continue;
     if (!isa<ArrayType>(Ty))
       continue;
-    // The bridge ABI exports a byte offset into `__mem`; a typed array has no
-    // byte offset. Exported globals stay in memory until the host side learns
-    // to read a float array (that is the next increment).
-    if (G.getName().starts_with("udon_export_"))
-      continue;
-    if (!onlyFloatAccesses(G)) {
+    // `analyzeTypedPointers` walks every pointer derived from this array and
+    // poisons any with a use the writer cannot lower against it. An array it
+    // did not clear stays byte-addressed in `__mem`.
+    if (!SafeTypedArrays.count(&G)) {
       if (getenv("UDON_DBG_F32"))
-        errs() << "f32 rejected: " << G.getName() << "\n";
+        errs() << "f32 rejected (unsafe): " << G.getName() << "\n";
       continue;
+    }
+    // An exported typed array's slot IS the bridge: the host reads `float[]`
+    // from `__bridge_<name>`, so the slot takes that name instead of the
+    // `__f32_` prefix. A non-exported array keeps the internal name.
+    std::string Name = "__f32_" + mangle(G.getName());
+    if (G.getName().starts_with("udon_export_")) {
+      StringRef Off = G.getName().drop_front(StringRef("udon_export_").size());
+      Name = "__bridge_" + mangle(Off);
     }
     if (getenv("UDON_DBG_F32"))
       errs() << "f32 accepted: " << G.getName() << "\n";
-    FloatArraySlots[&G] = "__f32_" + mangle(G.getName());
+    FloatArraySlots[&G] = Name;
   }
 }
 
@@ -600,6 +606,63 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
   *IndexSlot = nullptr;
   const Value *V = Ptr;
   int64_t ConstIndex = 0;
+  // A value whose slot already holds an element index (a provenanced cursor
+  // load, or a constant address of a typed array) resolves directly.
+  auto SlotIt = Slots.find(V);
+  if (SlotIt != Slots.end()) {
+    auto TA = TypedPointerArrays.find(SlotIt->second);
+    if (TA != TypedPointerArrays.end()) {
+      *IndexSlot = &SlotIt->second;
+      return TA->second;
+    }
+  }
+  // A GEP whose base slot is a typed cursor: the GEP's own result slot holds
+  // base + delta in element units (selectGEP's typed-cursor branch), so the
+  // result slot IS the index into the same array.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
+    if (GEP->getResultElementType() && GEP->getResultElementType()->isFloatTy()) {
+      auto BaseSlotIt = Slots.find(GEP->getPointerOperand());
+      if (BaseSlotIt != Slots.end()) {
+        auto TA = TypedPointerArrays.find(BaseSlotIt->second);
+        if (TA != TypedPointerArrays.end()) {
+          auto ResSlotIt = Slots.find(GEP);
+          if (ResSlotIt != Slots.end()) {
+            *IndexSlot = &ResSlotIt->second;
+            return TA->second;
+          }
+        }
+      }
+    }
+  // A constant-expression GEP of a typed array: the element index is the
+  // constant offset / 4, and the array is the base.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::GetElementPtr) {
+      auto *GEP = cast<GEPOperator>(CE);
+      if (auto *BaseG = dyn_cast<GlobalVariable>(GEP->getOperand(0))) {
+        auto FA = FloatArraySlots.find(BaseG);
+        if (FA != FloatArraySlots.end()) {
+          APInt Off(64, 0);
+          if (GEP->accumulateConstantOffset(*DL, Off)) {
+            int64_t Elem = Off.getSExtValue() / 4;
+            if (Elem != 0) {
+              std::string Key = "tgepi:" + std::to_string(Elem);
+              auto SlotIt = ConstantSlots.find(Key);
+              if (SlotIt == ConstantSlots.end()) {
+                std::string Name =
+                    "__tgepi_" + std::to_string(ConstantSlots.size());
+                declareSlot(Name, "SystemInt32");
+                DataLines.push_back("    " + Name + ": %SystemInt32, " +
+                                    std::to_string(Elem));
+                ConstantSlots[Key] = Name;
+                SlotIt = ConstantSlots.find(Key);
+              }
+              *IndexSlot = &SlotIt->second;
+            }
+            return FA->second;
+          }
+        }
+      }
+    }
   const GlobalVariable *G = dyn_cast<GlobalVariable>(V);
   if (!G) {
     // Walk a GEP whose pointer operand is the base and whose index is a
@@ -672,10 +735,14 @@ std::string UDONWriter::floatArrayFor(const Value *Ptr,
   auto It = FloatArraySlots.find(G);
   if (It == FloatArraySlots.end())
     return {};
-  // A non-zero constant index has to reach the array access as a literal or
-  // slot; the caller handles folding the offset into its own index math.
-  if (ConstIndex != 0 && !*IndexSlot)
-    return {};
+  // A non-zero constant index: `selectGEP`'s typed branch already wrote the
+  // constant into the GEP's own slot, so that slot IS the index.
+  if (ConstIndex != 0 && !*IndexSlot) {
+    auto ResSlotIt = Slots.find(V);
+    if (ResSlotIt == Slots.end())
+      return {};
+    *IndexSlot = &ResSlotIt->second;
+  }
   return It->second;
 }
 
@@ -703,6 +770,34 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
       }
       if (Same) TypedBase = Common;
     }
+  }
+  auto TypedCursor = [&]() -> const std::string * {
+    auto It = Slots.find(BaseOp);
+    if (It == Slots.end())
+      return nullptr;
+    auto TA = TypedPointerArrays.find(It->second);
+    return TA == TypedPointerArrays.end() ? nullptr : &It->second;
+  };
+  if (const std::string *BaseSlotP = TypedCursor()) {
+    unsigned Last = I.getNumIndices() - 1;
+    const Value *LastIdx = I.getOperand(Last + 1);
+    std::string Delta;
+    if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
+      int64_t D = CI->getSExtValue();
+      if (D == 0) {
+        emitCopy(B, *BaseSlotP, slotFor(&I));
+        return;
+      }
+      Delta = i32Constant(static_cast<int32_t>(D));
+    } else {
+      Delta = slotFor(LastIdx);
+    }
+    std::string Sum = freshSlot("gepi", Type::getInt32Ty(Mod->getContext()));
+    emitExtern(B,
+               "SystemInt32.__op_Addition__SystemInt32_SystemInt32__SystemInt32",
+               {*BaseSlotP, Delta}, Sum);
+    emitCopy(B, Sum, slotFor(&I));
+    return;
   }
   if (TypedBase && FloatArraySlots.count(TypedBase)) {
       unsigned Last = I.getNumIndices() - 1;
@@ -1268,6 +1363,30 @@ void UDONWriter::selectLoad(const LoadInst &I, UFunction &UF,
       emitCopy(B, S, slotFor(&I));
       return;
     }
+  // A load of a provenanced pointer global, or of a struct field the
+  // analysis proved, yields an ELEMENT INDEX: the array is recorded against
+  // the load's own slot so a later `*p = v` or `p[i]` resolves.
+  if (I.getType()->isPointerTy()) {
+    if (auto TP = ProvenancedLoads.find(&I); TP != ProvenancedLoads.end()) {
+      std::string Offset = pointerOffset(I.getPointerOperand(), B);
+      std::string Word =
+          emitLoad(Idx, Offset, Type::getInt32Ty(Mod->getContext()), 4);
+      std::string S = slotFor(&I);
+      emitCopy(UF.Blocks[Idx], Word, S);
+      TypedPointerArrays[S] = FloatArraySlots.lookup(TP->second);
+      return;
+    }
+    if (auto *G = dyn_cast<GlobalVariable>(I.getPointerOperand()))
+      if (auto TPG = TypedPointers.find(G); TPG != TypedPointers.end()) {
+        std::string Offset = pointerOffset(G, B);
+        std::string Word =
+            emitLoad(Idx, Offset, Type::getInt32Ty(Mod->getContext()), 4);
+        std::string S = slotFor(&I);
+        emitCopy(UF.Blocks[Idx], Word, S);
+        TypedPointerArrays[S] = FloatArraySlots.lookup(TPG->second);
+        return;
+      }
+  }
   // A float load through a typed float-array global is ONE `__Get__`: the
   // typed path needs no word-index shift and no bitcast. `selectGEP` put the
   // element index into the load's own slot when the base is a float-array
@@ -1303,6 +1422,25 @@ void UDONWriter::selectStore(const StoreInst &I, UFunction &UF,
       emitCopy(B, slotFor(I.getValueOperand()), S);
       return;
     }
+  // A pointer store into a provenanced pointer global keeps an ELEMENT INDEX
+  // in the global's word: `s_trianglePtr = ud_geo + 9216` becomes a store of
+  // the index 9216.
+  if (I.getValueOperand()->getType()->isPointerTy())
+    if (auto *G = dyn_cast<GlobalVariable>(I.getPointerOperand()))
+      if (auto TP = TypedPointers.find(G); TP != TypedPointers.end()) {
+        const std::string *SrcIdx = nullptr;
+        std::string Arr = floatArrayFor(I.getValueOperand(), &SrcIdx);
+        std::string Want = FloatArraySlots.lookup(TP->second);
+        if (!Arr.empty() && Arr == Want) {
+          std::string Offset = pointerOffset(G, B);
+          if (getenv("UDON_DBG_TPTR"))
+            errs() << "tptr-store " << G->getName() << " off=" << Offset
+                   << " val=" << (SrcIdx ? *SrcIdx : "<0>") << "\n";
+          emitStore(Idx, SrcIdx ? *SrcIdx : i32Constant(0), Offset,
+                    Type::getInt32Ty(Mod->getContext()), 4);
+          return;
+        }
+      }
   // The store half of the same shape: one `__Set__`, no bitcast.
   if (I.getValueOperand()->getType()->isFloatTy()) {
     const std::string *IdxSlot = nullptr;

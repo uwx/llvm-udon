@@ -332,6 +332,22 @@ std::string UDONWriter::constantSlot(const Constant *C) {
     // address. Fail loudly instead.
     if (!promotedSlot(*G).empty())
       reportUDONError("address of a promoted global was taken: " + G->getName());
+    // A typed float-array global's "address" is an ELEMENT INDEX of 0: the
+    // typed-pointer partition. A constant GEP of it folds to the element
+    // index itself, and the array the index denotes is recorded so a later
+    // load/store through the slot resolves.
+    if (auto FA = FloatArraySlots.find(G); FA != FloatArraySlots.end()) {
+      std::string Key = "tptr:" + G->getName().str();
+      auto SlotIt = ConstantSlots.find(Key);
+      if (SlotIt != ConstantSlots.end())
+        return SlotIt->second;
+      std::string Name = "__tptr_" + mangle(G->getName());
+      declareSlot(Name, "SystemInt32");
+      DataLines.push_back("    " + Name + ": %SystemInt32, 0");
+      ConstantSlots[Key] = Name;
+      TypedPointerArrays[Name] = FA->second;
+      return Name;
+    }
     // A global's address is a `__mem` byte offset, which is known before
     // selection, so it is an ordinary `SystemInt32` literal slot.
     auto It = GlobalOffsets.find(G);
@@ -353,6 +369,33 @@ std::string UDONWriter::constantSlot(const Constant *C) {
     SlotConstants[Name] = std::to_string(static_cast<uint32_t>(It->second));
     return Name;
   }
+
+  // A constant GEP of a typed float array is an ELEMENT INDEX:
+  // `getelementptr ([N x float], ptr @g, 0, <const>)` becomes the literal
+  // element index, with the array recorded for later resolution.
+  if (auto *CE = dyn_cast<ConstantExpr>(C))
+    if (CE->getOpcode() == Instruction::GetElementPtr) {
+      auto *GEP = cast<GEPOperator>(CE);
+      auto *BaseG = dyn_cast<GlobalVariable>(GEP->getOperand(0));
+      if (BaseG && FloatArraySlots.count(BaseG)) {
+        APInt Off(64, 0);
+        if (GEP->accumulateConstantOffset(*DL, Off)) {
+          int64_t Elem = Off.getSExtValue() / 4;
+          std::string Key =
+              "tgep:" + BaseG->getName().str() + ":" + std::to_string(Elem);
+          auto SlotIt = ConstantSlots.find(Key);
+          if (SlotIt != ConstantSlots.end())
+            return SlotIt->second;
+          std::string Name = "__tgep_" + std::to_string(ConstantSlots.size());
+          declareSlot(Name, "SystemInt32");
+          DataLines.push_back("    " + Name + ": %SystemInt32, " +
+                              std::to_string(Elem));
+          ConstantSlots[Key] = Name;
+          TypedPointerArrays[Name] = FloatArraySlots.lookup(BaseG);
+          return Name;
+        }
+      }
+    }
 
   if (auto *Fn = dyn_cast<Function>(C)) {
     // A function used as a value is an index into `__fn_table`, never a raw
@@ -408,6 +451,11 @@ std::string UDONWriter::constantSlot(const Constant *C) {
 
 bool UDONWriter::constantAddress(const Constant *C, int64_t &Out) const {
   if (auto *G = dyn_cast<GlobalVariable>(C)) {
+    // A typed float-array global has no byte address: its pointer is an
+    // element index. Folding it into a byte offset would point into `__mem`
+    // where the array no longer lives.
+    if (FloatArraySlots.count(G))
+      return false;
     auto It = GlobalOffsets.find(G);
     if (It == GlobalOffsets.end())
       return false;
@@ -686,6 +734,9 @@ bool UDONWriter::runOnModule(Module &M) {
   classifyGlobals();
   // Float-only globals with no byte-level reach move to typed
   // `%SystemSingleArray` slots, which halves the externs of every float access.
+  // The typed-pointer analysis decides which float arrays may leave `__mem`,
+  // so it runs before classification claims any of them.
+  analyzeTypedPointers();
   classifyFloatArrays();
   emitFloatArrays();
   layOutGlobals();
@@ -706,6 +757,14 @@ bool UDONWriter::runOnModule(Module &M) {
     StringRef Off = G.getName().drop_front(StringRef("udon_export_").size());
     if (Off.empty())
       reportUDONError("exported global with an empty name: " + G.getName());
+    // A typed float array has no byte offset: its slot (already named
+    // `__bridge_<name>` by classifyFloatArrays) is exported directly and the
+    // host reads a `float[]` from it.
+    auto FA = FloatArraySlots.find(&G);
+    if (FA != FloatArraySlots.end()) {
+      DataExports.push_back(FA->second);
+      continue;
+    }
     auto It = GlobalOffsets.find(&G);
     if (It == GlobalOffsets.end())
       reportUDONError("exported global has no offset: " + G.getName());

@@ -443,6 +443,19 @@ void UDONWriter::selectInstruction(const Instruction &I, UFunction &UF,
   case Instruction::Xor:
   case Instruction::Shl:
   case Instruction::AShr: {
+    // `ashr exact <typed-index-difference>, 2`: the IR believes the cursor
+    // difference is a byte offset and shifts it to elements, but the typed
+    // partition made both cursors ELEMENT indices, so the shift must go. A
+    // plain copy keeps the value exactly.
+    if (I.getOpcode() == Instruction::AShr) {
+      auto *CI = dyn_cast<ConstantInt>(I.getOperand(1));
+      if (CI && CI->getZExtValue() == 2 &&
+          ElementIndexValues.count(I.getOperand(0))) {
+        emitCopy(B, slotFor(I.getOperand(0)), slotFor(&I));
+        ElementIndexValues.insert(&I);
+        return;
+      }
+    }
     std::string Ty = operandType(I.getType());
     if (Ty.empty())
       reportUDONError("arithmetic on an unsupported type: " + I.getName());

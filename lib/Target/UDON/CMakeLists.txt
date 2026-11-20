@@ -19,7 +19,8 @@ set(UDON_WRITER_SOURCES
   UDONWriterCalls.cpp
   UDONWriterIntrinsics.cpp
   UDONWriterRuntime.cpp
-  UDONCallGraph.cpp)
+  UDONCallGraph.cpp
+  UDONTypedArrays.cpp)
 
 # A standalone build links against an LLVM whose export file may already define
 # LLVMUDONCodeGen (when that LLVM was itself built with this project in-tree),

@@ -446,6 +446,26 @@ public:
   void emitFloatArrays();
   /// Slot name -> element count, for the init block's ctor calls.
   StringMap<uint64_t> FloatArraySizes;
+  // --- typed float-array partition ---------------------------------------
+  //
+  // See UDONTypedArrays.cpp. `analyzeTypedPointers` runs BEFORE
+  // `classifyFloatArrays`, because it decides which arrays may be claimed.
+  /// Pointer global -> the typed float array it denotes. Its word holds an
+  /// ELEMENT INDEX into that array, not a `__mem` byte offset.
+  DenseMap<const GlobalVariable *, const GlobalVariable *> TypedPointers;
+  /// Arrays whose every derived-pointer use the writer can lower.
+  DenseSet<const GlobalVariable *> SafeTypedArrays;
+  /// Load instruction -> the array its result indexes. Selection registers
+  /// the load's slot in `TypedPointerArrays` so a later store resolves.
+  DenseMap<const Instruction *, const GlobalVariable *> ProvenancedLoads;
+  /// Slot name -> typed array slot, for slots holding an element index.
+  StringMap<std::string> TypedPointerArrays;
+  /// Instruction -> true when its i32 result is an ELEMENT INDEX rather than a
+  /// byte offset: `ptrtoint` of a typed cursor, and the `sub`/`trunc` of such
+  /// values. The writer uses it to drop the byte-to-element `>> 2` that the
+  /// IR emits after a typed-cursor difference.
+  DenseSet<const Value *> ElementIndexValues;
+  void analyzeTypedPointers();
 
 
   /// The condition as a `SystemBoolean` slot.
