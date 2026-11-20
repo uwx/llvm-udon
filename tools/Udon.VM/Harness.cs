@@ -703,6 +703,20 @@ namespace Udon.VM
                     _out.WriteLine("  cause: " + e.GetType().Name + ": " + e.Message);
                 // Dump before the program is discarded: a crashing run's heap is
                 // often the only evidence of where the state went wrong.
+                // The caller-save cursors at crash time say whether an
+                // IndexOutOfRangeException is a runaway spill rather than a bad
+                // array access.
+                try
+                {
+                    IUdonSymbolTable syms = _loaded.Program.SymbolTable;
+                    foreach (string cur in new[] { "__sptr_i32", "__sptr_f32", "__sptr_i64", "__sptr_f64", "__depth" })
+                        if (syms.HasAddressForSymbol(cur))
+                        {
+                            int c = _loaded.Program.Heap.GetHeapVariable<int>(syms.GetAddressFromSymbol(cur));
+                            _out.WriteLine("  " + cur + " at exception = " + c);
+                        }
+                }
+                catch { }
                 try { WriteDumps(); }
                 catch (Exception dex) { _out.WriteLine("dump failed: " + dex.GetType().Name + ": " + dex.Message); }
                 DiscardProgram();
