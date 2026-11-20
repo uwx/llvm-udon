@@ -183,10 +183,17 @@ fn processDisplayList(words: [*]u32) void {
                 // Writing only three left the colour region one third full and
                 // shifted every later triangle's data (measured: the first
                 // mismatch was exactly at the colour region's start).
-                var k: usize = 0;
-                while (k < 9) : (k += 1) {
-                    g_colorPtr[k] = g_color[k % 3];
-                }
+                // Written out rather than looped over `k % 3`: on the i686
+                // target that modulo is a 64-bit udiv/urem expansion, which
+                // costs ~10 extern calls per float (measured: 18 externs per
+                // iteration in the colour block, the hottest block of the
+                // tick). The C adapter writes the nine stores directly.
+                const cr = g_color[0];
+                const cg = g_color[1];
+                const cb = g_color[2];
+                g_colorPtr[0] = cr; g_colorPtr[1] = cg; g_colorPtr[2] = cb;
+                g_colorPtr[3] = cr; g_colorPtr[4] = cg; g_colorPtr[5] = cb;
+                g_colorPtr[6] = cr; g_colorPtr[7] = cg; g_colorPtr[8] = cb;
                 g_colorPtr += 9;
 
                 // The uv cursor is threaded through a LOCAL and stored back
