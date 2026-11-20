@@ -102,12 +102,18 @@ inline fn storeV(dst: [*]f32, v: Vec3) void {
 }
 
 /// Read the word at `ptr` and advance it by one element — the direct mirror of
-/// the C adapter's `*ptr++`. A pointer cursor (not a loop-carried element index)
-/// is essential: the writer mis-threads a loop-carried `i` phi across this
-/// function's 8-arm switch and its recursive self-call, so a second `words[i]`
-/// read in the same arm could land on the stale index and desync the walk
-/// (measured: the recursion bases cycled with period 4 and the buffer overflowed
-/// at 1024 triangles instead of terminating at 752).
+/// the C adapter's `*ptr++`.
+///
+/// A pointer cursor (not a loop-carried element index) is required: an index
+/// walk of the form `const w = words[i]; i = w+1` inside this function's
+/// 8-arm switch + recursive self-call MISCOMPILES in the full libsm64 build —
+/// the walk desyncs, the recursion bases cycle with period 4, and the 1024-
+/// slot triangle buffer overflows instead of the walk terminating at 752
+/// triangles. Measured: the index version crashes at boot, the pointer version
+/// is bit-exact (ret report 2482752, geometry 0/24816 vs native). The exact
+/// writer path that desyncs the index is not isolated in a standalone fixture
+/// (the real module only miscompiles in full build context); this is the
+/// working idiom, so keep it.
 inline fn nextWord(ptr: *[*]u32) u32 {
     const w = ptr.*;
     ptr.* = w + 1;
@@ -121,10 +127,9 @@ inline fn nextWord(ptr: *[*]u32) u32 {
 /// what limits the spilled set to one slot, matching the C adapter's cost.
 ///
 /// The walk uses a POINTER cursor (`var ptr`), not a loop-carried element index.
-/// The two are equivalent in C (`*ptr++` vs `words[i++]`), but the writer
-/// mis-threads the element-index phi across this function's switch and
-/// recursive self-call, while a single pointer value survives the emulated
-/// stack frame correctly.
+/// The two are equivalent in C (`*ptr++` vs `words[i++]`), but the index form
+/// miscompiles in this function's switch + self-recursion (see nextWord); a
+/// single pointer value survives the emulated stack frame correctly.
 fn processDisplayList(words: [*]u32) void {
     var ptr: [*]u32 = words;
     var vdata: [*]Vtx = undefined;
