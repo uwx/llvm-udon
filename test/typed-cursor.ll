@@ -71,3 +71,22 @@ define i32 @udon_event_start() {
 ; 1 + 2 + 3 + 4*10 = 46 -- and only a correctly typed partition puts the
 ; normal cursor's 4.0 into out[3].
 ; OUT: ret _start = 46
+
+; Nested-GEP shape: `gSineTable[i + 1024]` after inlining is
+; `getelementptr float, ptr (getelementptr [N x float], ptr @g, 0, 1024), i32 %i`.
+; The inner GEP must fold to element 1024, not become a byte address.
+@udon_export_tbl = global [16 x float] zeroinitializer
+
+define i32 @udon_event_nested() {
+  ; write 7.0 at element 11 (the inner GEP is 10, the outer adds 1)
+  %base = getelementptr [16 x float], ptr @udon_export_tbl, i32 0, i32 10
+  %p = getelementptr float, ptr %base, i32 1
+  store float 7.0, ptr %p
+  ; read it back through the same shape
+  %q = getelementptr [16 x float], ptr @udon_export_tbl, i32 0, i32 10
+  %r = getelementptr float, ptr %q, i32 1
+  %v = load float, ptr %r
+  %ok = fcmp oeq float %v, 7.0
+  %z = zext i1 %ok to i32
+  ret i32 %z
+}

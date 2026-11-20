@@ -757,7 +757,32 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
   // table pointer (the audio ramping tables do exactly this). Resolve the
   // chain: every incoming must denote the SAME typed array, else stay byte.
   const Value *BaseOp = I.getPointerOperand();
-  const GlobalVariable *TypedBase = dyn_cast<GlobalVariable>(BaseOp);
+  // A nested GEP of a typed array -- `getelementptr float, ptr
+  // (getelementptr([N x float], ptr @g, 0, <const>), i32 %i)`, which is how
+  // `gSineTable[i + 1024]` appears after inlining. Peel all-constant element
+  // GEPs to the typed global and keep their element offset. Only a CONSTANT
+  // outer index is folded here: a variable index would need an extra addition
+  // slot allocated mid-selection, and leaving that shape on the byte path is
+  // both correct and rare.
+  int64_t TypedBaseOffset = 0;
+  const Value *Peel = BaseOp;
+  for (;;) {
+    auto *GEP = dyn_cast<GEPOperator>(Peel);
+    if (!GEP || !GEP->hasAllConstantIndices())
+      break;
+    if (!GEP->getResultElementType() ||
+        !GEP->getResultElementType()->isFloatTy())
+      break;
+    auto *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+    if (!GV || !FloatArraySlots.count(GV))
+      break;
+    APInt Off(64, 0);
+    if (!GEP->accumulateConstantOffset(*DL, Off))
+      break;
+    TypedBaseOffset += Off.getSExtValue() / 4;
+    Peel = GV;
+  }
+  const GlobalVariable *TypedBase = dyn_cast<GlobalVariable>(Peel);
   if (!TypedBase) {
     if (auto *P = dyn_cast<PHINode>(BaseOp)) {
       const GlobalVariable *Common = nullptr;
@@ -803,12 +828,17 @@ void UDONWriter::selectGEP(const GetElementPtrInst &I, UFunction &UF,
       unsigned Last = I.getNumIndices() - 1;
       const Value *LastIdx = I.getOperand(Last + 1);
       if (auto *CI = dyn_cast<ConstantInt>(LastIdx)) {
-        emitCopy(B, i32Constant(static_cast<int32_t>(CI->getSExtValue())),
+        emitCopy(B, i32Constant(static_cast<int32_t>(CI->getSExtValue() +
+                                                     TypedBaseOffset)),
                  slotFor(&I));
         return;
       }
-      emitCopy(B, slotFor(LastIdx), slotFor(&I));
-      return;
+      // A variable outer index with a peeled constant offset stays on the
+      // byte path: folding it would need an addition slot allocated here.
+      if (TypedBaseOffset == 0) {
+        emitCopy(B, slotFor(LastIdx), slotFor(&I));
+        return;
+      }
     }
   // GEP arithmetic on the byte offset: a constant part folds into the base, and
   // a variable index is multiplied by the size of the type it indexes.
