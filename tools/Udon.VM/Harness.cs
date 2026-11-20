@@ -35,6 +35,10 @@ namespace Udon.VM
         public readonly Dictionary<string, long> Counts;
 
         private static readonly bool Trace = Environment.GetEnvironmentVariable("UDON_TRACE") != null;
+        /// <summary>`UDON_TRACE_EXTERN`: wrap every extern to name the one that
+        /// failed and its operand values, without the per-instruction trace.</summary>
+        private static readonly bool TraceExtern =
+            Environment.GetEnvironmentVariable("UDON_TRACE_EXTERN") != null;
 
         public HarnessWrapper(ExternRegistry registry, Dictionary<string, long> counts = null)
         {
@@ -65,12 +69,13 @@ namespace Udon.VM
                         original(heap, operands);
                     };
                 }
-                if (!Trace) return inner;
+                if (!Trace && !TraceExtern) return inner;
                 // Logs the last extern the VM reached, which is what names the
                 // failure: the VM reports only a bare UdonVMException.
                 return (heap, operands) =>
                 {
-                    Console.Error.WriteLine("  extern: " + signature);
+                    if (Trace)
+                        Console.Error.WriteLine("  extern: " + signature);
                     try { inner(heap, operands); }
                     catch (Exception ex)
                     {
@@ -693,9 +698,8 @@ namespace Udon.VM
                 // An exception is data: report it, then isolate the program so
                 // the next invocation does not inherit the poisoned heap.
                 _out.WriteLine("EXCEPTION " + entry + " " + ex.GetType().Name + ": " + ex.Message);
-                if (Environment.GetEnvironmentVariable("UDON_TRACE") != null)
-                    for (var e = ex.InnerException; e != null; e = e.InnerException)
-                        _out.WriteLine("  cause: " + e.GetType().Name + ": " + e.Message);
+                for (var e = ex.InnerException; e != null; e = e.InnerException)
+                    _out.WriteLine("  cause: " + e.GetType().Name + ": " + e.Message);
                 DiscardProgram();
                 return true;
             }
