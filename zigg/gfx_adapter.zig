@@ -184,36 +184,43 @@ fn processDisplayList(words: [*]u32) void {
                 }
                 g_colorPtr += 9;
 
+                // The uv cursor is threaded through a LOCAL and stored back
+                // once: three separate `g_uvPtr += 2` statements are dead
+                // stores when LLVM folds the six writes into vector stores,
+                // and the loop's phi-carried cursor then never advances, so
+                // every triangle writes uv at the same index.
+                var uv: [*]f32 = g_uvPtr;
                 if (g_textureOn != 0) {
                     // convert_uv_to_atlas, twice for two triangles' worth.
                     const cu0 = (@as(f32, @floatFromInt(@as(i32, vdata[v00].tc[0]) * @as(i32, @intCast(g_scaleS)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_uls))) / 32.0 / g_texWidth;
                     const cv0 = (@as(f32, @floatFromInt(@as(i32, vdata[v00].tc[1]) * @as(i32, @intCast(g_scaleT)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_ult))) / 32.0 / g_texHeight;
-                    g_uvPtr[0] = cu0 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
-                    g_uvPtr[1] = cv0 * g_texHeight / 64.0;
-                    g_uvPtr += 2;
+                    uv[0] = cu0 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
+                    uv[1] = cv0 * g_texHeight / 64.0;
+                    uv += 2;
 
                     const cu1 = (@as(f32, @floatFromInt(@as(i32, vdata[v01].tc[0]) * @as(i32, @intCast(g_scaleS)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_uls))) / 32.0 / g_texWidth;
                     const cv1 = (@as(f32, @floatFromInt(@as(i32, vdata[v01].tc[1]) * @as(i32, @intCast(g_scaleT)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_ult))) / 32.0 / g_texHeight;
-                    g_uvPtr[0] = cu1 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
-                    g_uvPtr[1] = cv1 * g_texHeight / 64.0;
-                    g_uvPtr += 2;
+                    uv[0] = cu1 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
+                    uv[1] = cv1 * g_texHeight / 64.0;
+                    uv += 2;
 
                     const cu2 = (@as(f32, @floatFromInt(@as(i32, vdata[v02].tc[0]) * @as(i32, @intCast(g_scaleS)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_uls))) / 32.0 / g_texWidth;
                     const cv2 = (@as(f32, @floatFromInt(@as(i32, vdata[v02].tc[1]) * @as(i32, @intCast(g_scaleT)) >> 16)) - 8.0 * @as(f32, @floatFromInt(g_ult))) / 32.0 / g_texHeight;
-                    g_uvPtr[0] = cu2 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
-                    g_uvPtr[1] = cv2 * g_texHeight / 64.0;
-                    g_uvPtr += 2;
+                    uv[0] = cu2 * g_texWidth / 64.0 / @as(f32, @floatFromInt(NUM_USED_TEXTURES)) + @as(f32, @floatFromInt(g_textureIndex)) / @as(f32, @floatFromInt(NUM_USED_TEXTURES));
+                    uv[1] = cv2 * g_texHeight / 64.0;
+                    uv += 2;
                 } else {
-                    g_uvPtr[0] = 1.0;
-                    g_uvPtr[1] = 1.0;
-                    g_uvPtr += 2;
-                    g_uvPtr[0] = 1.0;
-                    g_uvPtr[1] = 1.0;
-                    g_uvPtr += 2;
-                    g_uvPtr[0] = 1.0;
-                    g_uvPtr[1] = 1.0;
-                    g_uvPtr += 2;
+                    uv[0] = 1.0;
+                    uv[1] = 1.0;
+                    uv += 2;
+                    uv[0] = 1.0;
+                    uv[1] = 1.0;
+                    uv += 2;
+                    uv[0] = 1.0;
+                    uv[1] = 1.0;
+                    uv += 2;
                 }
+                g_uvPtr = uv;
 
                 // The host reads this to know how many triangles to draw. The
                 // C adapter recomputes it from the write cursor each triangle;

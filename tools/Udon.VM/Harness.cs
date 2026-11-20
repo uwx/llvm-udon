@@ -31,6 +31,11 @@ namespace Udon.VM
     {
         private readonly ExternRegistry _registry;
 
+        /// <summary>The VM whose EXTERN dispatch is running, so the wrapper can
+        /// report the program counter of the *extern itself* — the pc observed
+        /// after a throw has already advanced past it.</summary>
+        public static UdonVM CurrentVm;
+
         /// <summary>Per-signature call counts, filled only when `Counts` is set.</summary>
         public readonly Dictionary<string, long> Counts;
 
@@ -79,7 +84,10 @@ namespace Udon.VM
                     try { inner(heap, operands); }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine("  FAILED: " + ex.GetType().Name + ": " + ex.Message);
+                        Console.Error.WriteLine("  FAILED: " + ex.GetType().Name + ": " + ex.Message +
+                            (HarnessWrapper.CurrentVm != null
+                                ? " (extern pc=0x" + HarnessWrapper.CurrentVm.GetProgramCounter().ToString("X8") + ")"
+                                : ""));
                         // Operand slots, with the integer each holds when it has
                         // one: an out-of-range array access is almost always a
                         // bad address, and the address is an operand.
@@ -689,6 +697,7 @@ namespace Udon.VM
             uint result;
             uint originalAddress = _vm.GetProgramCounter();
             _vm.SetProgramCounter(entryPoint);
+            HarnessWrapper.CurrentVm = _vm;
             try
             {
                 result = _vm.Interpret();
